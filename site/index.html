@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard Manajemen Jaringan &middot; UPMK IV</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app">
+  <div id="sidebar"></div>
+
+  <main class="main">
+    <div class="container">
+      <div class="page-header">
+        <h1>Dashboard Manajemen Jaringan</h1>
+        <p>Ringkasan kinerja UPMK IV per Agustus 2026. Data pada halaman ini bersifat contoh (placeholder).</p>
+      </div>
+
+      <div class="stats-grid" id="stats"></div>
+
+      <div class="panels-grid">
+        <div class="card panel">
+          <div class="panel-header">
+            <h2>Ringkasan Progress Proyek</h2>
+            <a href="monitoring-progress.html">Lihat semua &rarr;</a>
+          </div>
+          <div id="projects"></div>
+        </div>
+
+        <div class="card panel kpi-panel">
+          <h2>Sorotan KPI</h2>
+          <div id="kpi-highlights"></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Akses Cepat</h2>
+        <div class="quicklinks-grid" id="quicklinks"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="js/sidebar.js"></script>
+<script src="js/dashboard.js"></script>
+</body>
+</html>
