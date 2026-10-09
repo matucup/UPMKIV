@@ -138,7 +138,7 @@ const personilList = (title, rows) => ({
   cols: [
     { label: 'Nama', val: (r) => r.nama }, { label: 'PSO', val: (r) => r.pso },
     { label: 'Penugasan', val: (r) => r.penugasan }, { label: 'Kualifikasi', val: (r) => r.kualifikasi },
-    { label: 'Proyek', val: (r) => r.proyek },
+    ...(rows.some((r) => r.proyek) ? [{ label: 'Proyek', val: (r) => r.proyek }] : []),
   ],
 });
 

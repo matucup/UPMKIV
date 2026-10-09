@@ -87,8 +87,7 @@ function normalizePersonil(grid) {
   for (const row of grid.slice(h.row + 1)) {
     const nama = cellAt(row, h, 'NAMA');
     if (!nama) continue;
-    // kolom PROYEK kosong di sheet; nama proyek ada di kolom I tanpa header
-    const proyek = cellAt(row, h, 'PROYEK') || clean(row[8]);
+    const proyek = cellAt(row, h, 'PROYEK');
     const g = (n) => cellAt(row, h, n);
     out.push({
       nama, pso: titleCase(g('PSO')) || '-', penugasan: g('PENUGASAN'), kualifikasi: g('KUALIFIKASI'), proyek,
