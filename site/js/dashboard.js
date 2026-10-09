@@ -273,7 +273,7 @@ async function refresh() {
   renderKpis();
   renderChart();
   renderPanels();
-  $('updated').textContent = `Diperbarui ${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`;
+  $('updated').textContent = `Dimuat: ${S.proyek.length} proyek · ${S.personil.length} personil · ${S.mm.rows.length} baris man-month · ${S.tad.length} baris TAD · Diperbarui ${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`;
   $('refresh').disabled = false;
 }
 

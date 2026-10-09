@@ -129,8 +129,8 @@ function normalizeTad(grid) {
   const out = [];
   for (const row of grid.slice(h.row + 1)) {
     const no = cellAt(row, h, 'No.');
-    if (!/^\d+$/.test(no)) continue;
     const g = (n) => cellAt(row, h, n);
+    if (!/^\d+$/.test(no) && !(g('Nomor Surat') && g('Kualifikasi Personil (Maksimum)'))) continue;
     const late = parseNum(g('Hari Kerja Terlambat'));
     out.push({
       no, surat: g('Nomor Surat'), tanggal: g('Tanggal'), kualifikasi: g('Kualifikasi Personil (Maksimum)'),
