@@ -15,25 +15,54 @@
   <main class="main">
     <div class="container">
       <div class="page-header">
-        <h1>Dashboard Manajemen Jaringan</h1>
-        <p>Ringkasan kinerja UPMK IV per Agustus 2026. Data pada halaman ini bersifat contoh (placeholder).</p>
+        <div>
+          <h1>Dashboard Manajemen Jaringan</h1>
+          <p>Ringkasan proyek, personil, man-month, dan permintaan TAD wilayah kerja UPMK IV. Data dibaca langsung dari Google Sheets; klik kartu, batang, atau baris untuk melihat detail.</p>
+        </div>
+        <div class="refresh-box">
+          <span id="updated" class="updated" aria-live="polite"></span>
+          <button type="button" id="refresh" class="btn">Muat ulang</button>
+        </div>
       </div>
 
-      <div class="stats-grid" id="stats"></div>
+      <div id="banner" class="banner" role="status" hidden></div>
 
-      <div class="panels-grid">
-        <div class="card panel">
+      <div class="stats-grid" id="kpis"></div>
+
+      <section class="card panel chart-panel">
+        <div class="panel-header">
+          <h2>Man-month per bulan</h2>
+          <span class="legend"><i class="lg now"></i>Bulan ini <i class="lg win"></i>6 bulan ke depan <i class="lg"></i>Lainnya</span>
+        </div>
+        <div id="chart"></div>
+      </section>
+
+      <div class="panels-grid even">
+        <section class="card panel">
+          <div class="panel-header"><h2>Proyek per PSO</h2></div>
+          <div id="pso-proyek" class="bar-list"></div>
+        </section>
+        <section class="card panel">
+          <div class="panel-header"><h2>Personil per PSO / unit</h2></div>
+          <div id="pso-personil" class="bar-list"></div>
+        </section>
+      </div>
+
+      <div class="panels-grid even">
+        <section class="card panel">
           <div class="panel-header">
-            <h2>Ringkasan Progress Proyek</h2>
-            <a href="monitoring-progress.html">Lihat semua &rarr;</a>
+            <div><h2>Penugasan segera berakhir</h2><p class="panel-sub" id="expiring-count"></p></div>
+            <button type="button" id="expiring-all" class="link-btn">Lihat semua →</button>
           </div>
-          <div id="projects"></div>
-        </div>
-
-        <div class="card panel kpi-panel">
-          <h2>Sorotan KPI</h2>
-          <div id="kpi-highlights"></div>
-        </div>
+          <div id="expiring" class="item-list"></div>
+        </section>
+        <section class="card panel">
+          <div class="panel-header">
+            <div><h2>Keterlambatan mobilisasi TAD</h2><p class="panel-sub">Urut dari hari kerja terlambat terbanyak</p></div>
+            <button type="button" id="tad-all" class="link-btn">Lihat semua →</button>
+          </div>
+          <div id="tad-late" class="item-list"></div>
+        </section>
       </div>
 
       <div class="section">
@@ -44,7 +73,21 @@
   </main>
 </div>
 
+<div class="modal" id="modal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-head">
+      <div><h2 id="modal-title"></h2><p id="modal-sub"></p></div>
+      <button type="button" id="modal-close" class="modal-x" aria-label="Tutup">&times;</button>
+    </div>
+    <div class="modal-tools" id="modal-tools"></div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
 <script src="js/sidebar.js"></script>
+<script src="js/sheets.js"></script>
+<script src="js/data.js"></script>
+<script src="js/sample.js"></script>
 <script src="js/dashboard.js"></script>
 </body>
 </html>

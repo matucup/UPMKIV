@@ -50,7 +50,7 @@ function renderSidebar() {
       <div class="sidebar-subtitle">Dashboard Manajemen Jaringan</div>
     </div>
     <nav class="sidebar-nav">${parts.join('')}</nav>
-    <div class="sidebar-footer">v1.0 &middot; Data contoh (placeholder)</div>
+    <div class="sidebar-footer">v1.0 &middot; Sumber: Google Sheets</div>
   `;
 }
 
