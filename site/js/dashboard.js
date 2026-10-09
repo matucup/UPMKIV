@@ -17,6 +17,7 @@ const STATUS_BADGE = {
   'Segera berakhir': 'badge-warning',
   'Berakhir': 'badge-late',
   'Tanpa tanggal': 'badge-muted',
+  'Belum ditugaskan': 'badge-muted',
 };
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -48,7 +49,7 @@ async function loadAll() {
       data[k] = fn(await loadSheet(SOURCES[k]));
     } catch (e) {
       failed.push(`${SOURCES[k].sheet} (${e.message})`);
-      data[k] = fn(SAMPLE_GRIDS[k]);
+      data[k] = k === 'mm' ? { months: [], rows: [] } : [];
     }
   }));
   return { data, failed };
@@ -123,14 +124,14 @@ function openRecord(cfg, row) {
 
 const projectCols = [
   { label: 'PSO', val: (r) => r.pso },
-  { label: 'Proyek', val: (r) => r.judul },
+  { label: 'Proyek', val: (r) => r.nama },
   { label: 'Provinsi', val: (r) => r.provinsi },
   { label: 'PIC', val: (r) => r.pic },
   { label: 'Akhir penugasan', val: (r) => fmtDate(r.akhir) },
   { label: 'Status', val: (r) => r.status, html: (r) => `<span class="badge ${STATUS_BADGE[r.status]}">${esc(r.status)}</span>` },
 ];
 
-const projectList = (title, rows, sub) => ({ title, sub, rows, cols: projectCols, record: (r) => r._f, recordTitle: (r) => r.judul });
+const projectList = (title, rows, sub) => ({ title, sub, rows, cols: projectCols, record: (r) => r._f, recordTitle: (r) => r.nama });
 
 const personilList = (title, rows) => ({
   title, rows, record: (r) => r._f, recordTitle: (r) => r.nama,
@@ -175,7 +176,7 @@ function renderKpis() {
   const late = tad.filter((t) => t.late > 0);
   const mobilized = tad.filter((t) => t.nama).length;
   const cards = [
-    { label: 'Proyek terdaftar', value: proyek.length, sub: `${new Set(proyek.map((p) => p.pso)).size} PSO · ${new Set(proyek.map((p) => p.provinsi).filter(Boolean)).size} provinsi`, open: () => openList(projectList('Semua proyek', proyek)) },
+    { label: 'Proyek terdaftar', value: proyek.length, sub: `${proyek.filter((p) => p.pic).length} ditugaskan · ${proyek.filter((p) => !p.pic).length} belum`, open: () => openList(projectList('Semua proyek', proyek)) },
     { label: 'Personil', value: personil.length, sub: `${new Set(personil.map((p) => p.pso)).size} PSO / unit kerja`, open: () => openList(personilList('Seluruh personil', personil)) },
     { label: 'Man-month 6 bulan', value: fmt(winTotal), sub: wm.length ? `${wm[0].label} – ${wm[wm.length - 1].label}` : 'Belum ada data bulan', open: () => openList(mmList('Man-month 6 bulan', wm.length ? `${wm[0].label} – ${wm[wm.length - 1].label}` : '', winRows.sort((a, b) => b.mm - a.mm))) },
     { label: 'Permintaan TAD', value: tad.length, sub: `${late.length} terlambat · ${mobilized} sudah mobilisasi`, open: () => openList(tadList('Semua permintaan TAD', tad)) },
@@ -235,7 +236,7 @@ function renderPanels() {
   const watch = [...soon, ...ended];
   $('expiring-count').textContent = `${soon.length} segera berakhir · ${ended.length} sudah berakhir`;
   $('expiring').innerHTML = watch.length
-    ? watch.slice(0, 7).map((p, i) => `<button type="button" class="item-row" data-i="${i}"><span class="item-main"><span class="item-title">${esc(p.judul)}</span><span class="item-sub">${esc(p.pso)}${p.provinsi ? ` · ${esc(p.provinsi)}` : ''}</span></span><span class="badge ${STATUS_BADGE[p.status]}">${esc(daysText(p.daysLeft))}</span></button>`).join('')
+    ? watch.slice(0, 7).map((p, i) => `<button type="button" class="item-row" data-i="${i}"><span class="item-main"><span class="item-title">${esc(p.nama)}</span><span class="item-sub">${esc(p.pso)}${p.provinsi ? ` · ${esc(p.provinsi)}` : ''}</span></span><span class="badge ${STATUS_BADGE[p.status]}">${esc(daysText(p.daysLeft))}</span></button>`).join('')
     : '<p class="empty">Tidak ada penugasan yang segera berakhir.</p>';
   $('expiring').onclick = (e) => {
     const b = e.target.closest('[data-i]');
@@ -268,7 +269,7 @@ async function refresh() {
   const { data, failed } = await loadAll();
   S = data;
   $('banner').hidden = !failed.length;
-  $('banner').textContent = failed.length ? `Sebagian data gagal dimuat dari Google Sheets, bagian ini menampilkan data contoh: ${failed.join('; ')}. Pastikan sheet dibagikan sebagai "Siapa saja yang memiliki link".` : '';
+  $('banner').textContent = failed.length ? `Data gagal dimuat dari Google Sheets: ${failed.join('; ')}. Bagian terkait dikosongkan. Pastikan sheet dibagikan sebagai "Siapa saja yang memiliki link".` : '';
   renderKpis();
   renderChart();
   renderPanels();

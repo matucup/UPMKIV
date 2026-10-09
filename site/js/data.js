@@ -2,6 +2,7 @@ const MONTHS_ID = {
   jan: 0, januari: 0, feb: 1, februari: 1, mar: 2, maret: 2, apr: 3, april: 3, mei: 4,
   jun: 5, juni: 5, jul: 6, juli: 6, agu: 7, agt: 7, ags: 7, agustus: 7,
   sep: 8, sept: 8, september: 8, okt: 9, oktober: 9, nov: 10, november: 10, des: 11, desember: 11,
+  may: 4, aug: 7, august: 7, oct: 9, october: 9, dec: 11, december: 11, june: 5, july: 6, march: 2, january: 0, february: 1,
 };
 
 function parseDate(s) {
@@ -29,6 +30,7 @@ function parseNum(s) {
   return Number.isFinite(n) ? n : null;
 }
 
+const titleCase = (s) => (s && s === s.toUpperCase() ? s.toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase()) : s);
 const norm = (s) => String(s ?? '').toLowerCase().replace(/\s+/g, ' ').trim();
 const clean = (s) => String(s ?? '').replace(/\s+/g, ' ').trim();
 
@@ -53,24 +55,25 @@ function normalizeProyek(grid) {
   const today = new Date();
   const out = [];
   for (const row of grid.slice(h.row + 1)) {
-    const judul = cellAt(row, h, 'Judul Surat Penugasan');
-    const kode = cellAt(row, h, 'Kode Lokasi');
-    if (!judul && !kode) continue;
     const g = (n) => cellAt(row, h, n);
+    const judul = g('Judul Surat Penugasan').replace(/^\(TBA\)$/i, '');
+    const epc = g('Proyek EPC');
+    const kode = g('Kode Lokasi');
+    if (!judul && !kode && !epc) continue;
+    const pso = titleCase(g('PSO')) || '-';
     const akhir = parseDate(g('Akhir Penugasan')) || parseDate(g('COD Amandemen')) || parseDate(g('COD Kontrak'));
     const daysLeft = akhir ? Math.ceil((akhir - today) / 864e5) : null;
-    const status = daysLeft === null ? 'Tanpa tanggal' : daysLeft < 0 ? 'Berakhir' : daysLeft <= 90 ? 'Segera berakhir' : 'Berjalan';
+    const status = daysLeft === null ? (g('PIC') ? 'Tanpa tanggal' : 'Belum ditugaskan') : daysLeft < 0 ? 'Berakhir' : daysLeft <= 90 ? 'Segera berakhir' : 'Berjalan';
     out.push({
-      pso: g('PSO') || '-', pic: g('PIC'), jenis: g('Jenis'), kode, judul: judul || kode,
-      provinsi: g('Provinsi'), akhir, daysLeft, status,
+      pso, pic: g('PIC'), jenis: g('Jenis'), kode, nama: epc || judul, provinsi: titleCase(g('Provinsi')), akhir, daysLeft, status,
       _f: [
-        ['PSO', g('PSO')], ['PIC', g('PIC')], ['PC', g('PC')], ['SC', g('SC')], ['Jenis', g('Jenis')],
-        ['Kode Lokasi', kode], ['Judul Surat Penugasan', judul], ['Nomor Surat Penugasan', g('Nomor Surat Penugasan')],
-        ['Proyek EPC', g('Proyek EPC')], ['Provinsi', g('Provinsi')], ['User Pengguna Jasa', g('User Pengguna Jasa')],
-        ['Direksi Lapangan', g('Direksi Lapangan')], ['Durasi', g('Durasi')], ['Awal Penugasan', g('Awal Penugasan')],
+        ['PSO', pso], ['PIC', g('PIC')], ['PC', g('PC')], ['SC', g('SC')], ['Jenis', g('Jenis')],
+        ['Kode Lokasi', kode], ['Proyek', epc], ['Judul Surat Penugasan', judul], ['Nomor Surat Penugasan', g('Nomor Surat Penugasan')],
+        ['Provinsi', titleCase(g('Provinsi'))], ['User Pengguna Jasa', g('User Pengguna Jasa')],
+        ['Direksi Lapangan', g('Direksi Lapangan')], ['Durasi (bulan)', g('Durasi')], ['Awal Penugasan', g('Awal Penugasan')],
         ['Akhir Penugasan', g('Akhir Penugasan')], ['Tanggal Kontrak', g('Tanggal Kontrak')],
         ['Efektif Kontrak', g('Efektif Kontrak')], ['COD Kontrak', g('COD Kontrak')],
-        ['COD Amandemen', g('COD Amandemen')], ['EOT ke-', g('EOT ke-')],
+        ['COD Amandemen', g('COD Amandemen')], ['EOT ke-', g('EOT ke-')], ['Status', status],
       ],
     });
   }
@@ -88,7 +91,7 @@ function normalizePersonil(grid) {
     const proyek = cellAt(row, h, 'PROYEK') || clean(row[8]);
     const g = (n) => cellAt(row, h, n);
     out.push({
-      nama, pso: g('PSO') || '-', penugasan: g('PENUGASAN'), kualifikasi: g('KUALIFIKASI'), proyek,
+      nama, pso: titleCase(g('PSO')) || '-', penugasan: g('PENUGASAN'), kualifikasi: g('KUALIFIKASI'), proyek,
       _f: [['Nama', nama], ['PSO', g('PSO')], ['Penugasan', g('PENUGASAN')], ['Kualifikasi', g('KUALIFIKASI')],
         ['Proyek', proyek], ['Tanggal Awal Bergabung', g('TANGGAL AWAL BERGABUNG')]],
     });
@@ -113,7 +116,7 @@ function normalizeMM(grid) {
     if (!pso || !proyek) continue;
     const vals = months.map((mo) => parseNum(row[mo.col]) || 0);
     rows.push({
-      pso, proyek, posisi: cellAt(row, h, 'Posisi'), keahlian: cellAt(row, h, 'Keahlian'),
+      pso: titleCase(pso), proyek, posisi: cellAt(row, h, 'Posisi'), keahlian: cellAt(row, h, 'Keahlian'),
       kualifikasi: cellAt(row, h, 'Kualifikasi Dalam SLA') || cellAt(row, h, 'Kualifikasi Maks'), vals,
     });
   }
