@@ -1,0 +1,135 @@
+const JOBS = {
+  datalist: [normalizeDatalist, []],
+  rekap: [normalizeRekapPengawas, { rows: [], total: null }],
+  pa: [normalizePA, []],
+  pengadaan: [normalizePengadaan, []],
+  mm: [normalizeMM, { months: [], rows: [] }],
+  tad: [normalizeTad, []],
+};
+const TABLE_REQ = {
+  lap_kpi: ['Kelompok', 'Indikator', 'Nilai'], lap_matlev: ['Kelompok', 'Program', 'Status'], lap_patuh: ['Indikator', 'Terlapor', 'Wajib'],
+  lap_idd: ['Mitra', 'IDD_Ulang'], lap_kegiatan: ['Tanggal', 'Kegiatan'], lap_kontrak: ['Uraian', 'Jumlah'], lap_alih: ['Pemberi_Kerja', 'Pengalihan'],
+};
+let S = null;
+let L = null;
+
+const key = (s) => String(s).replace(/[^A-Za-z0-9]/g, '').toLowerCase();
+const num = (v) => parseNum(v) ?? 0;
+
+function periodLabel() {
+  const dates = S.datalist.map((p) => p.periode).filter(Boolean).sort((a, b) => a - b);
+  const d = dates.length ? dates[Math.floor(dates.length / 2)] : new Date();
+  return d.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+}
+
+function renderExecKpis() {
+  const { datalist: d, rekap, mm, tad } = S;
+  const win = mmWindow(mm);
+  const wm = mm.months.slice(win.start, win.end);
+  const mmTotal = mm.rows.reduce((a, r) => a + r.vals.slice(win.start, win.end).reduce((x, y) => x + y, 0), 0);
+  const late = tad.filter((t) => t.late > 0).length;
+  const cards = [
+    { label: 'Paket dimonitor', value: d.length, sub: `${d.filter((p) => p.status === 'Selesai').length} selesai · ${d.filter((p) => !['Selesai', 'Belum mulai'].includes(p.status)).length} konstruksi aktif`, open: () => openList(pkgList('Semua paket', d)) },
+    { label: 'Merah / Kuning', value: `${d.filter((p) => p.status === 'Merah').length} / ${d.filter((p) => p.status === 'Kuning').length}`, sub: 'paket menyimpang dari plan', open: () => openList(pkgList('Paket Merah dan Kuning', d.filter((p) => ['Merah', 'Kuning'].includes(p.status)).sort((a, b) => a.dev - b.dev))) },
+    { label: 'Pengawas lapangan', value: rekap.total ? rekap.total.total : '-', sub: rekap.total ? `${rekap.total.sc} SC · ${rekap.total.pengawas} pengawas · ${rekap.total.tad} TAD` : 'rekap belum terbaca', open: () => $('sdm').scrollIntoView({ behavior: 'smooth' }) },
+    { label: 'Man-month 6 bulan', value: fmt(mmTotal), sub: wm.length ? `${wm[0].label} – ${wm[wm.length - 1].label}` : 'belum ada data', open: () => { window.location.href = 'index.html'; } },
+    { label: 'Permintaan TAD', value: tad.length, sub: `${late} terlambat mobilisasi`, open: () => { window.location.href = 'index.html'; } },
+  ];
+  $('kpis').innerHTML = cards.map((c, i) => `<button type="button" class="card stat-card stat-btn" data-k="${i}"><div class="stat-label">${esc(c.label)}</div><div class="stat-value">${esc(c.value)}</div><div class="stat-sub">${esc(c.sub)}</div></button>`).join('');
+  $('kpis').onclick = (e) => { const b = e.target.closest('[data-k]'); if (b) cards[+b.dataset.k].open(); };
+}
+
+function renderSdm() {
+  const { rows, total } = S.rekap;
+  if (!rows.length) { $('sdm').innerHTML = '<p class="empty">Rekap jumlah pengawas belum terbaca.</p>'; return; }
+  const tr = (r, tag) => `<tr><td>${esc(r.pso)}</td><td>${esc(r.pc)}</td><td class="num">${r.sc}</td><td class="num">${r.pengawas}</td><td class="num">${r.tad}</td><td class="num">${r.total}</td><td class="num">${r.sebelum.selesai}</td><td class="num">${r.sebelum.ongoing}</td><td class="num">${r.sebelum.total}</td><td class="num">${r.setelah.total}</td><td class="num">${r.rasio === null ? '-' : r.rasio.toLocaleString('id-ID', { maximumFractionDigits: 2 })}</td></tr>`;
+  $('sdm').innerHTML = `<div class="table-scroll"><table class="report-table"><thead><tr><th>PSO</th><th>Project coordinator</th><th class="num">SC</th><th class="num">Pengawas</th><th class="num">TAD</th><th class="num">Total</th><th class="num">Selesai/SLO</th><th class="num">On going</th><th class="num">Proyek (kini)</th><th class="num">Proyek (setelah)</th><th class="num">Rasio</th></tr></thead><tbody>${rows.map((r) => tr(r)).join('')}</tbody>${total ? `<tfoot>${tr({ ...total, pso: 'Total', pc: '', rasio: null })}</tfoot>` : ''}</table></div>`;
+}
+
+function renderPa() {
+  const withPa = S.pa.filter((p) => p.items.length);
+  $('pa-note').textContent = `${withPa.length} dari ${S.pa.length} paket sudah memiliki data penetapan anggaran (PA)`;
+  const match = (p) => S.datalist.find((x) => key(x.nama) === key(p.nama));
+  $('pa').innerHTML = withPa.length ? `<div class="table-scroll"><table class="report-table"><thead><tr><th>Paket</th><th class="num">Pagu</th><th class="num">Realisasi</th><th class="num">Serapan</th><th class="num">Progres fisik</th></tr></thead><tbody>${withPa.map((p, i) => { const pct = p.pagu ? (p.realisasi / p.pagu) * 100 : 0; const m = match(p); return `<tr class="clickable" tabindex="0" data-i="${i}"><td>${esc(p.nama)}</td><td class="num">${fmtRp(p.pagu)}</td><td class="num">${fmtRp(p.realisasi)}</td><td class="num">${fmtPct(pct)}</td><td class="num">${m ? fmtPct(m.aktual) : '-'}</td></tr>`; }).join('')}</tbody></table></div>` : '<p class="empty">Belum ada data PA.</p>';
+  const open = (i) => { const p = withPa[i]; openList({ title: p.nama, sub: `Pagu ${fmtRp(p.pagu)} · realisasi ${fmtRp(p.realisasi)}`, rows: p.items, cols: [{ label: 'No. PA', val: (r) => r.pa }, { label: 'Kegiatan', val: (r) => r.kegiatan }, { label: 'Pagu', val: (r) => fmtRp(r.pagu), num: true }, { label: 'Realisasi', val: (r) => fmtRp(r.realisasi), num: true }, { label: 'Sisa', val: (r) => fmtRp(r.sisa ?? r.pagu - r.realisasi), num: true }] }); };
+  $('pa').onclick = (e) => { const tr = e.target.closest('tr[data-i]'); if (tr) open(+tr.dataset.i); };
+  $('pa').onkeydown = (e) => { const tr = e.target.closest('tr[data-i]'); if (tr && e.key === 'Enter') open(+tr.dataset.i); };
+}
+
+function renderPengadaan() {
+  const pg = S.pengadaan;
+  const sum = (k) => pg.reduce((a, x) => a + x[k], 0);
+  $('pengadaan-kpi').innerHTML = [['Mobil', sum('dc') + sum('mpv'), `${sum('dc')} double cabin · ${sum('mpv')} MPV`], ['Motor', sum('motor'), 'kendaraan roda dua'], ['Mess / site office', pg.filter((x) => x.noMess).length, 'kontrak mess aktif']]
+    .map(([l, v, s]) => `<div class="mini"><div class="stat-label">${l}</div><div class="stat-value">${v}</div><div class="stat-sub">${s}</div></div>`).join('');
+  const due = [];
+  for (const x of pg) {
+    const dm = daysUntil(x.akhirMess), dk = daysUntil(x.akhirKendaraan);
+    if (dm !== null && dm <= 120) due.push({ x, tag: dm < 0 ? 'Mess lewat' : `Mess ${dm} hari`, text: `Kontrak mess ${x.noMess || ''} berakhir ${fmtDate(x.akhirMess)}`, days: dm });
+    if (dk !== null && dk <= 120) due.push({ x, tag: dk < 0 ? 'Kendaraan lewat' : `Kendaraan ${dk} hari`, text: `Kontrak kendaraan berakhir ${x.akhirKendaraanTxt}`, days: dk });
+  }
+  due.sort((a, b) => a.days - b.days);
+  $('pengadaan-due').innerHTML = due.length ? due.slice(0, 6).map((r, i) => `<button type="button" class="item-row" data-i="${i}"><span class="item-main"><span class="item-title">${esc(r.x.nama)}</span><span class="item-sub">${esc(r.text)}</span></span><span class="badge ${r.days < 0 ? 'badge-late' : 'badge-warning'}">${esc(r.tag)}</span></button>`).join('') : '<p class="empty">Tidak ada kontrak mess atau kendaraan yang berakhir dalam 120 hari.</p>';
+  const cfg = { title: 'Kontrak mess dan kendaraan segera berakhir', rows: due, cols: [{ label: 'Proyek', val: (r) => r.x.nama }, { label: 'Peringatan', val: (r) => r.tag }, { label: 'Keterangan', val: (r) => r.text }], record: (r) => r.x._f, recordTitle: (r) => r.x.nama };
+  $('pengadaan-due').onclick = (e) => { const b = e.target.closest('[data-i]'); if (b) openRecord(cfg, due[+b.dataset.i]); };
+  $('pengadaan-all').onclick = () => openList(cfg);
+}
+
+/* Bagian dari sheet Laporan Bulanan */
+
+function renderLaporan() {
+  const box = $('laporan');
+  if (!L) {
+    box.innerHTML = `<div class="card panel pending-card"><strong>Bagian ini belum tersambung ke Google Sheet.</strong><br>Kinerja, kepatuhan, K3 dan keamanan, ERM, IDD mitra, status kontrak, pengalihan anggaran, dan kegiatan khusus tidak ada di spreadsheet yang ada sekarang. Isi tab-tab pada template <em>Monitoring_Progres_PUSMANPRO</em> (sudah berisi data laporan Agustus 2026), unggah ke Google Sheets, lalu isi <code>LAPORAN_ID</code> di <code>js/config.js</code>.</div>`;
+    return;
+  }
+  const parts = [];
+  const kpi = L.lap_kpi;
+  const groups = [...new Set(kpi.map((r) => r.Kelompok))];
+  parts.push(`<h3 class="section-title">Kinerja dan pengadaan</h3><div class="stats-grid">${kpi.filter((r) => r.Tampilkan !== 'Tidak').slice(0, 8).map((r) => `<div class="card stat-card"><div class="stat-label">${esc(r.Indikator)}</div><div class="stat-value">${esc(r.Nilai)}${r.Satuan ? ` <small>${esc(r.Satuan)}</small>` : ''}</div><div class="stat-sub">${esc(r.Keterangan || r.Kelompok)}</div></div>`).join('')}</div>`);
+  const mt = L.lap_matlev;
+  const mg = [...new Set(mt.map((r) => r.Kelompok))];
+  parts.push(`<h3 class="section-title">Matlev K3, keamanan, dan ERM</h3><div class="panels-grid even">${mg.map((g) => { const rows = mt.filter((r) => r.Kelompok === g); const done = rows.filter((r) => /terlaksana/i.test(r.Status)).length; return `<section class="card panel"><div class="panel-header"><div><h2>${esc(g)}</h2><p class="panel-sub">${done} dari ${rows.length} program terlaksana</p></div></div><div class="item-list">${rows.map((r) => `<div class="item-row static"><span class="item-main"><span class="item-title wrap">${esc(r.Program)}</span></span><span class="badge ${/terlaksana/i.test(r.Status) ? 'badge-active' : 'badge-warning'}">${esc(r.Status)}</span></div>`).join('')}</div></section>`; }).join('')}</div>`);
+  parts.push(`<h3 class="section-title">Kepatuhan</h3><section class="card panel"><div class="bar-list">${L.lap_patuh.map((r) => { const t = num(r.Terlapor), w = num(r.Wajib); return `<div class="bar-row static"><span class="bar-label">${esc(r.Indikator)}</span><span class="bar-track"><span class="bar-fill" style="width:${w ? Math.min(100, (t / w) * 100) : 0}%"></span></span><span class="bar-val wide">${t}/${w}</span></div>`; }).join('')}</div></section>`);
+  const idd = L.lap_idd.map((r) => ({ ...r, d: parseDate(r.IDD_Ulang) })).sort((a, b) => (a.d || 0) - (b.d || 0));
+  parts.push(`<h3 class="section-title">Integrity due diligence mitra</h3><section class="card panel"><div class="table-scroll"><table class="report-table"><thead><tr><th>Mitra</th><th>Tanggal IDD</th><th>Penilaian risiko</th><th>Mitigasi</th><th>IDD ulang</th></tr></thead><tbody>${idd.map((r) => { const dd = daysUntil(r.d); return `<tr><td>${esc(r.Mitra)}</td><td>${esc(r.Tanggal_IDD)}</td><td>${esc(r.Penilaian_Risiko)}</td><td>${esc(r.Mitigasi)}</td><td>${esc(r.IDD_Ulang)} ${dd !== null && dd <= 90 ? `<span class="badge ${dd < 0 ? 'badge-late' : 'badge-warning'}">${dd < 0 ? 'terlewat' : dd + ' hari'}</span>` : ''}</td></tr>`; }).join('')}</tbody></table></div></section>`);
+  const kt = L.lap_kontrak;
+  const totalN = kt.reduce((a, r) => a + num(r.Jumlah), 0), totalV = kt.reduce((a, r) => a + num(r.Nilai), 0);
+  parts.push(`<h3 class="section-title">Status kontrak</h3><section class="card panel"><div class="table-scroll"><table class="report-table"><thead><tr><th>Uraian</th><th class="num">Jumlah</th><th class="num">Nilai</th><th class="num">Volume</th><th>Berakhir periode ini</th></tr></thead><tbody>${kt.map((r) => `<tr><td>${esc(r.Uraian)}</td><td class="num">${esc(r.Jumlah)}</td><td class="num">${fmtRp(num(r.Nilai))}</td><td class="num">${esc(r.Volume)} ${esc(r.Satuan)}</td><td>${esc(r.Berakhir_Periode_Ini)}</td></tr>`).join('')}</tbody><tfoot><tr><td>Total</td><td class="num">${totalN}</td><td class="num">${fmtRp(totalV)}</td><td></td><td></td></tr></tfoot></table></div></section>`);
+  const al = L.lap_alih;
+  const sP = al.reduce((a, r) => a + num(r.Pengalihan), 0), sR = al.reduce((a, r) => a + num(r.Realisasi_Biaya), 0);
+  parts.push(`<h3 class="section-title">Pengalihan anggaran pemberi kerja</h3><section class="card panel"><div class="table-scroll"><table class="report-table"><thead><tr><th>Pemberi kerja</th><th class="num">Pengalihan</th><th class="num">Realisasi biaya</th><th class="num">Lebih / (kurang)</th></tr></thead><tbody>${al.map((r) => `<tr><td>${esc(r.Pemberi_Kerja)}</td><td class="num">${fmtRp(num(r.Pengalihan))}</td><td class="num">${fmtRp(num(r.Realisasi_Biaya))}</td><td class="num">${fmtRp(num(r.Pengalihan) - num(r.Realisasi_Biaya))}</td></tr>`).join('')}</tbody><tfoot><tr><td>Total</td><td class="num">${fmtRp(sP)}</td><td class="num">${fmtRp(sR)}</td><td class="num">${fmtRp(sP - sR)}</td></tr></tfoot></table></div></section>`);
+  const ev = L.lap_kegiatan;
+  parts.push(`<h3 class="section-title">Kegiatan khusus</h3><section class="card panel"><div class="item-list">${ev.map((r) => `<div class="item-row static"><span class="item-main"><span class="item-title wrap">${esc(r.Kegiatan)}</span><span class="item-sub">${esc(r.Kategori || '')}</span></span><span class="badge badge-muted">${esc(r.Tanggal)}</span></div>`).join('')}</div></section>`);
+  box.innerHTML = parts.join('');
+}
+
+async function loadLaporan() {
+  if (!SOURCES.lap_kpi.id) return null;
+  const out = {};
+  const failed = [];
+  await Promise.all(Object.keys(TABLE_REQ).map(async (k) => {
+    try { out[k] = normalizeTable(await loadSheet(SOURCES[k]), TABLE_REQ[k]); } catch (e) { failed.push(`${SOURCES[k].sheet} (${e.message})`); out[k] = []; }
+  }));
+  if (failed.length) out._failed = failed;
+  return out;
+}
+
+async function refresh() {
+  $('refresh').disabled = true;
+  $('updated').textContent = 'Memuat data dari Google Sheets…';
+  const [{ data, failed }, lap] = await Promise.all([loadSources(JOBS), loadLaporan()]);
+  S = data;
+  L = lap;
+  showBanner([...failed, ...(lap && lap._failed ? lap._failed : [])]);
+  $('periode').textContent = periodLabel();
+  renderExecKpis(); renderPso(); renderAttention(); renderAlerts(); renderSdm(); renderPa(); renderPengadaan(); renderLaporan();
+  $('updated').textContent = `Diperbarui ${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`;
+  $('refresh').disabled = false;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  initModal();
+  $('refresh').onclick = refresh;
+  $('print').onclick = () => window.print();
+  refresh();
+});

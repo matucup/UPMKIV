@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Monitoring Progress &middot; UPMK IV</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app">
+  <div id="sidebar"></div>
+
+  <main class="main">
+    <div class="container">
+      <div class="page-header">
+        <div>
+          <h1>Monitoring Progress Proyek</h1>
+          <p>Progres aktual dibanding plan seluruh paket yang disupervisi PUSMANPRO, lengkap dengan isu, tindak lanjut, dan peringatan kontrak. Status dihitung seragam: Hijau jika deviasi &ge; &minus;5 poin, Kuning hingga &minus;10, Merah di bawahnya.</p>
+        </div>
+        <div class="refresh-box">
+          <span id="updated" class="updated" aria-live="polite"></span>
+          <button type="button" id="refresh" class="btn">Muat ulang</button>
+        </div>
+      </div>
+
+      <div id="banner" class="banner" role="status" hidden></div>
+
+      <div class="stats-grid five" id="kpis"></div>
+
+      <div class="panels-grid even">
+        <section class="card panel">
+          <div class="panel-header"><h2>Status paket per PSO</h2></div>
+          <div id="pso-board" class="bar-list"></div>
+          <div id="legend-status" class="legend status-legend"></div>
+        </section>
+        <section class="card panel">
+          <div class="panel-header"><h2>Isu per kategori</h2></div>
+          <div id="issue-cats" class="bar-list stacked"></div>
+        </section>
+      </div>
+
+      <div class="panels-grid even">
+        <section class="card panel">
+          <div class="panel-header">
+            <div><h2>Paket perlu perhatian</h2><p class="panel-sub" id="attention-count"></p></div>
+            <button type="button" id="attention-all" class="link-btn">Lihat semua &rarr;</button>
+          </div>
+          <div id="attention" class="item-list"></div>
+        </section>
+        <section class="card panel">
+          <div class="panel-header">
+            <div><h2>Peringatan kontrak dan penugasan</h2><p class="panel-sub" id="alerts-count"></p></div>
+            <button type="button" id="alerts-all" class="link-btn">Lihat semua &rarr;</button>
+          </div>
+          <div id="alerts" class="item-list"></div>
+        </section>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="modal" id="modal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-head">
+      <div><h2 id="modal-title"></h2><p id="modal-sub"></p></div>
+      <button type="button" id="modal-close" class="modal-x" aria-label="Tutup">&times;</button>
+    </div>
+    <div class="modal-tools" id="modal-tools"></div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<script src="js/sidebar.js"></script>
+<script src="js/config.js"></script>
+<script src="js/sheets.js"></script>
+<script src="js/data.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/progress.js"></script>
+<script src="js/monitoring.js"></script>
+</body>
+</html>

@@ -10,13 +10,17 @@ function parseDate(s) {
   if (!s) return null;
   let m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
   if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
-  m = /^(\d{1,2})\s+([A-Za-z]+)\.?\s+(\d{2,4})$/.exec(s);
+  m = /^(\d{1,2})[\s-]+([A-Za-z]+)\.?[\s-]+(\d{2,4})(?!\d)/.exec(s);
   if (m && MONTHS_ID[m[2].toLowerCase()] !== undefined) {
     const y = +m[3] < 100 ? 2000 + +m[3] : +m[3];
     return new Date(y, MONTHS_ID[m[2].toLowerCase()], +m[1]);
   }
   m = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/.exec(s);
-  if (m) return new Date(+m[3] < 100 ? 2000 + +m[3] : +m[3], +m[2] - 1, +m[1]);
+  if (m) {
+    const y = +m[3] < 100 ? 2000 + +m[3] : +m[3];
+    const [a, b] = [+m[1], +m[2]];
+    return a > 12 ? new Date(y, b - 1, a) : new Date(y, a - 1, b);
+  }
   return null;
 }
 
@@ -144,4 +148,147 @@ function normalizeTad(grid) {
     });
   }
   return out;
+}
+
+function parsePct(s) {
+  s = String(s ?? '').trim();
+  if (!s || s.startsWith('#')) return null;
+  const n = parseNum(s.replace('%', ''));
+  if (n === null) return null;
+  return s.endsWith('%') ? n : n <= 1 ? n * 100 : n;
+}
+
+const daysUntil = (d) => (d ? Math.ceil((d - new Date()) / 864e5) : null);
+const DEV_GREEN = -5;
+const DEV_YELLOW = -10;
+
+function progressStatus(aktual, plan) {
+  if (aktual === null || plan === null) return 'Belum dilaporkan';
+  if (aktual >= 100 && plan >= 100) return 'Selesai';
+  if (aktual === 0 && plan === 0) return 'Belum mulai';
+  const dev = aktual - plan;
+  return dev >= DEV_GREEN ? 'Hijau' : dev >= DEV_YELLOW ? 'Kuning' : 'Merah';
+}
+
+function normalizeDatalist(grid) {
+  const h = findHeader(grid, ['Kode Lokasi', 'Nama Proyek', 'Progres Aktual (%)']);
+  if (!h) throw new Error('Header Datalist tidak ditemukan');
+  const out = [];
+  for (const row of grid.slice(h.row + 1)) {
+    const g = (n) => cellAt(row, h, n);
+    if (!g('Nama Proyek')) continue;
+    const pst = g('PST');
+    const pso = /^PSO /i.test(pst) ? pst.replace(/^PSO /i, '').replace(/ dan PSO /i, ' & ') : 'Lainnya';
+    const aktual = parsePct(g('Progres Aktual (%)'));
+    const plan = parsePct(g('Progres Plan(%)'));
+    const issues = [];
+    for (let i = 1; i <= 5; i++) {
+      const kat = g('Kategori' + i);
+      if (kat && !/^tidak ada isu$/i.test(kat)) issues.push({ kategori: kat, detail: g('Detail' + i), tl: g('Tindaklanjut' + i) });
+    }
+    const periode = parseDate(g('Periode'));
+    const penugasanSd = parseDate(g('Jangka Waktu Penugasan'));
+    const cod = parseDate(g('COD Amandemen')) || parseDate(g('COD Kontrak'));
+    const garansi = parseDate(g('Masa Berlaku Bank Garansi'));
+    const dev = aktual !== null && plan !== null ? aktual - plan : null;
+    out.push({
+      kode: g('Kode Lokasi'), no: g('No'), pso: titleCase(pso), jenis: g('Jenis'), milestone: g('Milestone'), nama: g('Nama Proyek'),
+      kontraktor: g('Kontraktor'), direksi: g('Direksi Pekerjaan'), pemberi: g('Pemberi Tugas'), aktual, plan, dev,
+      status: progressStatus(aktual, plan), periode, ageDays: periode ? -daysUntil(periode) : null,
+      penugasanSd, cod, garansi, nilai: parseNum(g('Nilai Kontrak Akhir')), aktivitas: g('Aktivitas'), issues,
+      habisSebelumCod: !!(penugasanSd && cod && penugasanSd < cod && g('Progres Aktual (%)') && !(aktual >= 100)),
+      _f: [
+        ['Kode Lokasi', g('Kode Lokasi')], ['No. Paket', g('No')], ['PSO', pso], ['Jenis', g('Jenis')], ['Milestone', g('Milestone')],
+        ['Nama Proyek', g('Nama Proyek')], ['Pemberi Tugas', g('Pemberi Tugas')], ['Direksi Pekerjaan', g('Direksi Pekerjaan')],
+        ['Kontraktor', g('Kontraktor')], ['No. Kontrak', g('No Kontrak')], ['Nilai Kontrak Akhir', g('Nilai Kontrak Akhir')],
+        ['Progres Aktual', g('Progres Aktual (%)')], ['Progres Plan', g('Progres Plan(%)')],
+        ['Deviasi (poin)', dev === null ? '' : dev.toFixed(2)], ['Status (aturan dashboard)', progressStatus(aktual, plan)],
+        ['Data per', g('Periode')], ['Penugasan s.d.', g('Jangka Waktu Penugasan')], ['COD Kontrak', g('COD Kontrak')],
+        ['COD Amandemen', g('COD Amandemen')], ['Bank Garansi s.d.', g('Masa Berlaku Bank Garansi')], ['Kapasitas', `${g('Kapasitas')} ${g('Satuan Kapasitas')}`.trim()],
+        ['Lingkup', g('Detail')], ['Aktivitas periode ini', g('Aktivitas')],
+        ...issues.flatMap((x, i) => [[`Isu ${i + 1}`, x.kategori], [`Detail isu ${i + 1}`, x.detail], [`Tindak lanjut ${i + 1}`, x.tl]]),
+        ['RLB', g('RLB')], ['Energize', g('Energize')], ['SLO', g('SLO')], ['BAST 1', g('BAST 1')], ['BAST 2', g('BAST 2')],
+      ],
+    });
+  }
+  return out;
+}
+
+function normalizeRekapPengawas(grid) {
+  const start = grid.findIndex((r) => norm(r[0]) === 'pso');
+  if (start < 0) throw new Error('Header Rekap Jumlah Pengawas tidak ditemukan');
+  const rows = [];
+  let total = null;
+  for (const r of grid.slice(start + 1)) {
+    const name = clean(r[0]);
+    if (!name) continue;
+    const n = (i) => parseNum(r[i]) ?? 0;
+    const rec = { pso: titleCase(name), pc: clean(r[1]), sc: n(2), pengawas: n(3), tad: n(4), total: n(5), sebelum: { selesai: n(6), ongoing: n(7), idle: n(8), total: n(9) }, setelah: { selesai: n(10), ongoing: n(11), idle: n(12), total: n(13) }, rasio: parseNum(r[14]) };
+    if (norm(name) === 'total') { total = rec; break; }
+    if (/^(rasio)/i.test(name)) break;
+    rows.push(rec);
+  }
+  return { rows, total };
+}
+
+function normalizePA(grid) {
+  const h = findHeader(grid, ['No', 'Nama Proyek', 'No. PA']);
+  if (!h) throw new Error('Header Monitoring PA tidak ditemukan');
+  const sub = grid[h.row + 1] || [];
+  const col = (name) => sub.findIndex((c) => norm(c) === name);
+  const cPagu = col('pagu'), cReal = col('realisasi'), cSisa = col('sisa');
+  if (cPagu < 0) throw new Error('Kolom Pagu tidak ditemukan');
+  const projects = [];
+  let cur = null, pa = '', tgl = '';
+  for (const row of grid.slice(h.row + 2)) {
+    const nama = cellAt(row, h, 'Nama Proyek');
+    if (nama) { cur = { nama, items: [], pagu: 0, realisasi: 0 }; projects.push(cur); pa = ''; tgl = ''; }
+    if (!cur) continue;
+    pa = cellAt(row, h, 'No. PA') || pa;
+    tgl = cellAt(row, h, 'Tanggal PA') || tgl;
+    const kegiatan = cellAt(row, h, 'Nama Kegiatan');
+    const pagu = parseNum(row[cPagu]);
+    if (!kegiatan || pagu === null) continue;
+    const real = cReal >= 0 ? parseNum(row[cReal]) ?? 0 : 0;
+    cur.items.push({ pa, tgl, kegiatan, pagu, realisasi: real, sisa: cSisa >= 0 ? parseNum(row[cSisa]) : pagu - real });
+    cur.pagu += pagu; cur.realisasi += real;
+  }
+  return projects;
+}
+
+function normalizePengadaan(grid) {
+  const h = findHeader(grid, ['No', 'Nama Proyek', 'Lokasi Mess']);
+  if (!h) throw new Error('Header Monitoring Pengadaan tidak ditemukan');
+  const out = [];
+  for (const row of grid.slice(h.row + 1)) {
+    const g = (n) => cellAt(row, h, n);
+    const nama = g('Nama Proyek');
+    if (!nama) continue;
+    const dates = (g('Akhir Kontrak Kendaraan (mobil/mtor)').match(/\d{1,2}[\s-][A-Za-z]{3,}[\s-]\d{2,4}/g) || []).map(parseDate).filter(Boolean);
+    out.push({
+      nama, mess: g('Lokasi Mess'), noMess: g('Nomor Kontrak Mess'), akhirMess: parseDate(g('Akhir Kontrak Mess')),
+      dc: parseNum(g('Jumlah Kendaraan Double Cabin')) ?? 0, mpv: parseNum(g('Jumlah Kendaraan MPV')) ?? 0, motor: parseNum(g('Jumlah Motor')) ?? 0,
+      akhirKendaraan: dates.length ? new Date(Math.max(...dates)) : null, akhirKendaraanTxt: g('Akhir Kontrak Kendaraan (mobil/mtor)'),
+      laptop: parseNum(g('Jumlah Laptop')) ?? 0, printer: parseNum(g('Jumlah Printer')) ?? 0,
+      _f: [['Proyek', nama], ['Lokasi mess', g('Lokasi Mess')], ['No. kontrak mess', g('Nomor Kontrak Mess')], ['Akhir kontrak mess', g('Akhir Kontrak Mess')],
+        ['Double cabin', g('Jumlah Kendaraan Double Cabin')], ['MPV', g('Jumlah Kendaraan MPV')], ['Motor', g('Jumlah Motor')],
+        ['Akhir kontrak kendaraan', g('Akhir Kontrak Kendaraan (mobil/mtor)')], ['Keterangan', g('Keterangan (Perbantukan UPP, dll)')],
+        ['Laptop', g('Jumlah Laptop')], ['Printer', g('Jumlah Printer')], ['Peralatan lain', g('Peralatan Lainnya')], ['Keterangan lain', g('Keterangan Lain-lain')]],
+    });
+  }
+  return out;
+}
+
+function mmWindow(mm) {
+  const cur = new Date().getFullYear() * 12 + new Date().getMonth();
+  let start = mm.months.findIndex((m) => m.y * 12 + m.m >= cur);
+  if (start < 0) start = Math.max(0, mm.months.length - 6);
+  return { start, end: Math.min(mm.months.length, start + 6), cur: mm.months.findIndex((m) => m.y * 12 + m.m === cur) };
+}
+
+function normalizeTable(grid, required) {
+  const h = findHeader(grid, required);
+  if (!h) throw new Error('Header tidak ditemukan');
+  const cols = h.cells.map((c, i) => [clean(c), i]).filter(([c]) => c);
+  return grid.slice(h.row + 1).filter((r) => r.some((c) => clean(c))).map((r) => Object.fromEntries(cols.map(([c, i]) => [c, clean(r[i])])));
 }
