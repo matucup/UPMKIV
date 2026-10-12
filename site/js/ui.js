@@ -60,17 +60,17 @@ function openList(cfg) {
     const shown = idx.slice(0, 500);
     $('modal-count').textContent = `${idx.length} dari ${cfg.rows.length}${idx.length > 500 ? ' (500 teratas)' : ''}`;
     $('modal-body').innerHTML = shown.length
-      ? `<div class="table-wrap"><table class="table"><thead><tr>${cfg.cols.map((c) => `<th${c.num ? ' class="num"' : ''}>${esc(c.label)}</th>`).join('')}</tr></thead><tbody>${shown.map((i) => `<tr${cfg.record ? ` class="clickable" tabindex="0" data-i="${i}"` : ''}>${cfg.cols.map((c) => `<td${c.num ? ' class="num"' : ''}>${c.html ? c.html(cfg.rows[i]) : esc(c.val(cfg.rows[i]))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`
+      ? `<div class="table-wrap"><table class="table"><thead><tr>${cfg.cols.map((c) => `<th${c.num ? ' class="num"' : ''}>${esc(c.label)}</th>`).join('')}</tr></thead><tbody>${shown.map((i) => `<tr${cfg.record || cfg.card ? ` class="clickable" tabindex="0" data-i="${i}"` : ''}>${cfg.cols.map((c) => `<td${c.num ? ' class="num"' : ''}>${c.html ? c.html(cfg.rows[i]) : esc(c.val(cfg.rows[i]))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`
       : '<p class="empty">Tidak ada data yang cocok.</p>';
   };
   $('modal-search').addEventListener('input', draw);
   $('modal-body').onclick = (e) => {
     const tr = e.target.closest('tr[data-i]');
-    if (tr && cfg.record) openRecord(cfg, cfg.rows[+tr.dataset.i]);
+    if (tr && (cfg.record || cfg.card)) (cfg.card ? cfg.card(cfg.rows[+tr.dataset.i], cfg) : openRecord(cfg, cfg.rows[+tr.dataset.i]));
   };
   $('modal-body').onkeydown = (e) => {
     const tr = e.target.closest('tr[data-i]');
-    if (tr && cfg.record && e.key === 'Enter') openRecord(cfg, cfg.rows[+tr.dataset.i]);
+    if (tr && (cfg.record || cfg.card) && e.key === 'Enter') (cfg.card ? cfg.card(cfg.rows[+tr.dataset.i], cfg) : openRecord(cfg, cfg.rows[+tr.dataset.i]));
   };
   draw();
   if ($('modal').hidden) openModal();
@@ -87,6 +87,18 @@ function openRecord(cfg, row) {
   $('modal-body').innerHTML = `<dl class="record">${fields.filter(([, v]) => String(v ?? '').trim() !== '').map(([l, v]) => `<dt>${esc(l)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>`;
   if ($('modal').hidden) openModal();
   $('modal-back').focus();
+}
+
+function openCard(title, sub, html, backCfg) {
+  $('modal-title').textContent = title;
+  $('modal-sub').textContent = sub || '';
+  $('modal-tools').innerHTML = backCfg ? '<button type="button" class="back" id="modal-back">← Kembali ke daftar</button>' : '';
+  if (backCfg) $('modal-back').onclick = () => openList(backCfg);
+  $('modal-body').onclick = null;
+  $('modal-body').onkeydown = null;
+  $('modal-body').innerHTML = html;
+  if ($('modal').hidden) openModal();
+  (backCfg ? $('modal-back') : $('modal-close')).focus();
 }
 
 function barList(el, entries, onPick) {

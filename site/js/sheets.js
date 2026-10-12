@@ -12,6 +12,7 @@ const SOURCES = {
 const LAPORAN_TABS = {
   lap_kpi: 'Laporan_KPI', lap_matlev: 'Matlev_ERM', lap_patuh: 'Kepatuhan', lap_idd: 'IDD_Mitra',
   lap_kegiatan: 'Kegiatan', lap_kontrak: 'Kontrak_Status', lap_alih: 'Pengalihan_Anggaran',
+  lap_proyek: 'Proyek', lap_progres: 'Progres_Bulanan', lap_isu: 'Isu', lap_dok: 'Dokumen_Milestone', lap_biaya: 'Realisasi_Biaya',
 };
 for (const [k, sheet] of Object.entries(LAPORAN_TABS)) SOURCES[k] = { id: typeof LAPORAN_ID === 'undefined' ? '' : LAPORAN_ID, sheet };
 

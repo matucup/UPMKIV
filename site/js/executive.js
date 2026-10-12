@@ -1,5 +1,4 @@
 const JOBS = {
-  datalist: [normalizeDatalist, []],
   rekap: [normalizeRekapPengawas, { rows: [], total: null }],
   pa: [normalizePA, []],
   pengadaan: [normalizePengadaan, []],
@@ -8,7 +7,7 @@ const JOBS = {
 };
 const TABLE_REQ = {
   lap_kpi: ['Kelompok', 'Indikator', 'Nilai'], lap_matlev: ['Kelompok', 'Program', 'Status'], lap_patuh: ['Indikator', 'Terlapor', 'Wajib'],
-  lap_idd: ['Mitra', 'IDD_Ulang'], lap_kegiatan: ['Tanggal', 'Kegiatan'], lap_kontrak: ['Uraian', 'Jumlah'], lap_alih: ['Pemberi_Kerja', 'Pengalihan'],
+  lap_idd: ['Mitra', 'IDD_Ulang'], lap_kegiatan: ['Tanggal', 'Kegiatan'], lap_kontrak: ['Uraian', 'Jumlah'], lap_alih: ['Pemberi_Kerja', 'Pengalihan'], lap_biaya: ['ID_Paket', 'Total_Realisasi'],
 };
 let S = null;
 let L = null;
@@ -47,13 +46,32 @@ function renderSdm() {
 }
 
 function renderPa() {
+  const biaya = latestBiaya();
+  const match = (id, nama) => S.datalist.find((x) => (id && x.id === id) || key(x.nama) === key(nama));
+  if (biaya.length) {
+    $('pa-note').textContent = `${biaya.length} paket sudah melaporkan total realisasi biaya (sumber: tab Realisasi_Biaya)`;
+    $('pa').innerHTML = `<div class="table-scroll"><table class="report-table"><thead><tr><th>Paket</th><th class="num">Pagu</th><th class="num">Realisasi</th><th class="num">Serapan</th><th class="num">Progres fisik</th><th class="num">Selisih (poin)</th></tr></thead><tbody>${biaya.map((r) => { const m = match(r.id, r.nama); const sel = m && m.aktual !== null && r.serapan !== null ? r.serapan - m.aktual : null; return `<tr><td>${esc(r.nama)}</td><td class="num">${r.pagu ? fmtRp(r.pagu) : '-'}</td><td class="num">${fmtRp(r.realisasi)}</td><td class="num">${fmtPct(r.serapan)}</td><td class="num">${m ? fmtPct(m.aktual) : '-'}</td><td class="num">${sel === null ? '-' : `<span class="badge ${Math.abs(sel) > 20 ? 'badge-warning' : 'badge-muted'}">${fmtDev(sel)}</span>`}</td></tr>`; }).join('')}</tbody></table></div><p class="panel-sub" style="margin-top:10px">Selisih = serapan biaya dikurangi progres fisik. Selisih besar menandakan biaya berjalan jauh di depan atau di belakang pekerjaan.</p>`;
+    return;
+  }
   const withPa = S.pa.filter((p) => p.items.length);
-  $('pa-note').textContent = `${withPa.length} dari ${S.pa.length} paket sudah memiliki data penetapan anggaran (PA)`;
-  const match = (p) => S.datalist.find((x) => key(x.nama) === key(p.nama));
-  $('pa').innerHTML = withPa.length ? `<div class="table-scroll"><table class="report-table"><thead><tr><th>Paket</th><th class="num">Pagu</th><th class="num">Realisasi</th><th class="num">Serapan</th><th class="num">Progres fisik</th></tr></thead><tbody>${withPa.map((p, i) => { const pct = p.pagu ? (p.realisasi / p.pagu) * 100 : 0; const m = match(p); return `<tr class="clickable" tabindex="0" data-i="${i}"><td>${esc(p.nama)}</td><td class="num">${fmtRp(p.pagu)}</td><td class="num">${fmtRp(p.realisasi)}</td><td class="num">${fmtPct(pct)}</td><td class="num">${m ? fmtPct(m.aktual) : '-'}</td></tr>`; }).join('')}</tbody></table></div>` : '<p class="empty">Belum ada data PA.</p>';
+  $('pa-note').textContent = `${withPa.length} dari ${S.pa.length} paket sudah memiliki data penetapan anggaran (PA). Realisasi belum diisi di tab Realisasi_Biaya.`;
+  $('pa').innerHTML = withPa.length ? `<div class="table-scroll"><table class="report-table"><thead><tr><th>Paket</th><th class="num">Pagu</th><th class="num">Realisasi</th><th class="num">Serapan</th><th class="num">Progres fisik</th></tr></thead><tbody>${withPa.map((p, i) => { const pct = p.pagu ? (p.realisasi / p.pagu) * 100 : 0; const m = match(null, p.nama); return `<tr class="clickable" tabindex="0" data-i="${i}"><td>${esc(p.nama)}</td><td class="num">${fmtRp(p.pagu)}</td><td class="num">${fmtRp(p.realisasi)}</td><td class="num">${fmtPct(pct)}</td><td class="num">${m ? fmtPct(m.aktual) : '-'}</td></tr>`; }).join('')}</tbody></table></div>` : '<p class="empty">Belum ada data PA.</p>';
   const open = (i) => { const p = withPa[i]; openList({ title: p.nama, sub: `Pagu ${fmtRp(p.pagu)} · realisasi ${fmtRp(p.realisasi)}`, rows: p.items, cols: [{ label: 'No. PA', val: (r) => r.pa }, { label: 'Kegiatan', val: (r) => r.kegiatan }, { label: 'Pagu', val: (r) => fmtRp(r.pagu), num: true }, { label: 'Realisasi', val: (r) => fmtRp(r.realisasi), num: true }, { label: 'Sisa', val: (r) => fmtRp(r.sisa ?? r.pagu - r.realisasi), num: true }] }); };
   $('pa').onclick = (e) => { const tr = e.target.closest('tr[data-i]'); if (tr) open(+tr.dataset.i); };
   $('pa').onkeydown = (e) => { const tr = e.target.closest('tr[data-i]'); if (tr && e.key === 'Enter') open(+tr.dataset.i); };
+}
+
+function latestBiaya() {
+  const rows = (L && L.lap_biaya) || [];
+  const best = new Map();
+  for (const r of rows) {
+    const real = parseNum(r.Total_Realisasi);
+    const d = parseDate(r.Periode);
+    if (!r.ID_Paket || real === null || !d) continue;
+    const cur = best.get(r.ID_Paket);
+    if (!cur || d > cur.d) best.set(r.ID_Paket, { d, r, real });
+  }
+  return [...best.values()].map(({ r, real }) => { const pagu = parseNum(r.Pagu); return { id: r.ID_Paket, nama: r.Nama_Proyek, pagu, realisasi: real, serapan: pagu ? (real / pagu) * 100 : null }; });
 }
 
 function renderPengadaan() {
@@ -117,8 +135,9 @@ async function loadLaporan() {
 async function refresh() {
   $('refresh').disabled = true;
   $('updated').textContent = 'Memuat data dari Google Sheets…';
-  const [{ data, failed }, lap] = await Promise.all([loadSources(JOBS), loadLaporan()]);
-  S = data;
+  const [{ data, failed }, lap, mon] = await Promise.all([loadSources(JOBS), loadLaporan(), loadMonitoring()]);
+  S = { ...data, datalist: mon.rows };
+  failed.push(...mon.failed);
   L = lap;
   showBanner([...failed, ...(lap && lap._failed ? lap._failed : [])]);
   $('periode').textContent = periodLabel();

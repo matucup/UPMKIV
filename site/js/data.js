@@ -15,6 +15,8 @@ function parseDate(s) {
     const y = +m[3] < 100 ? 2000 + +m[3] : +m[3];
     return new Date(y, MONTHS_ID[m[2].toLowerCase()], +m[1]);
   }
+  m = /^([A-Za-z]+)\s+(\d{4})$/.exec(s);
+  if (m && MONTHS_ID[m[1].toLowerCase()] !== undefined) return new Date(+m[2], MONTHS_ID[m[1].toLowerCase()], 1);
   m = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/.exec(s);
   if (m) {
     const y = +m[3] < 100 ? 2000 + +m[3] : +m[3];
@@ -170,6 +172,33 @@ function progressStatus(aktual, plan) {
   return dev >= DEV_GREEN ? 'Hijau' : dev >= DEV_YELLOW ? 'Kuning' : 'Merah';
 }
 
+function makePackage(o) {
+  const aktual = parsePct(o.aktual);
+  const plan = parsePct(o.plan);
+  const periode = parseDate(o.periode);
+  const penugasanSd = parseDate(o.penugasanSd);
+  const cod = parseDate(o.codAmd) || parseDate(o.codKontrak);
+  const dev = aktual !== null && plan !== null ? aktual - plan : null;
+  const status = progressStatus(aktual, plan);
+  return {
+    id: o.id, kode: o.kode, no: o.no, pso: titleCase(o.pso), jenis: o.jenis, milestone: o.milestone, nama: o.nama,
+    kontraktor: o.kontraktor, direksi: o.direksi, pemberi: o.pemberi, noKontrak: o.noKontrak, aktual, plan, dev, status,
+    periode, ageDays: periode ? -daysUntil(periode) : null, penugasanSd, cod, garansi: parseDate(o.garansi),
+    nilai: parseNum(o.nilai), aktivitas: o.aktivitas, issues: o.issues, lingkup: o.lingkup, dokumen: o.dokumen || [],
+    habisSebelumCod: !!(penugasanSd && cod && penugasanSd < cod && aktual !== null && aktual < 100),
+    _f: [
+      ['Kode Lokasi', o.kode], ['No. Paket', o.no], ['PSO', o.pso], ['Jenis', o.jenis], ['Milestone', o.milestone],
+      ['Nama Proyek', o.nama], ['Pemberi Tugas', o.pemberi], ['Direksi Pekerjaan', o.direksi], ['Kontraktor', o.kontraktor],
+      ['No. Kontrak', o.noKontrak], ['Nilai Kontrak Akhir', o.nilai], ['Progres Aktual', o.aktual], ['Progres Plan', o.plan],
+      ['Deviasi (poin)', dev === null ? '' : dev.toFixed(2)], ['Status (aturan dashboard)', status], ['Data per', o.periode],
+      ['Penugasan s.d.', o.penugasanSd], ['COD Kontrak', o.codKontrak], ['COD Amandemen', o.codAmd], ['Bank Garansi s.d.', o.garansi],
+      ['Lingkup', o.lingkup], ['Aktivitas periode ini', o.aktivitas],
+      ...o.issues.flatMap((x, i) => [[`Isu ${i + 1}`, x.kategori], [`Detail isu ${i + 1}`, x.detail], [`Tindak lanjut ${i + 1}`, x.tl]]),
+      ...o.dokumen.map((x) => [x.jenis, x.isi]),
+    ],
+  };
+}
+
 function normalizeDatalist(grid) {
   const h = findHeader(grid, ['Kode Lokasi', 'Nama Proyek', 'Progres Aktual (%)']);
   if (!h) throw new Error('Header Datalist tidak ditemukan');
@@ -179,39 +208,43 @@ function normalizeDatalist(grid) {
     if (!g('Nama Proyek')) continue;
     const pst = g('PST');
     const pso = /^PSO /i.test(pst) ? pst.replace(/^PSO /i, '').replace(/ dan PSO /i, ' & ') : 'Lainnya';
-    const aktual = parsePct(g('Progres Aktual (%)'));
-    const plan = parsePct(g('Progres Plan(%)'));
     const issues = [];
     for (let i = 1; i <= 5; i++) {
       const kat = g('Kategori' + i);
       if (kat && !/^tidak ada isu$/i.test(kat)) issues.push({ kategori: kat, detail: g('Detail' + i), tl: g('Tindaklanjut' + i) });
     }
-    const periode = parseDate(g('Periode'));
-    const penugasanSd = parseDate(g('Jangka Waktu Penugasan'));
-    const cod = parseDate(g('COD Amandemen')) || parseDate(g('COD Kontrak'));
-    const garansi = parseDate(g('Masa Berlaku Bank Garansi'));
-    const dev = aktual !== null && plan !== null ? aktual - plan : null;
-    out.push({
-      kode: g('Kode Lokasi'), no: g('No'), pso: titleCase(pso), jenis: g('Jenis'), milestone: g('Milestone'), nama: g('Nama Proyek'),
-      kontraktor: g('Kontraktor'), direksi: g('Direksi Pekerjaan'), pemberi: g('Pemberi Tugas'), aktual, plan, dev,
-      status: progressStatus(aktual, plan), periode, ageDays: periode ? -daysUntil(periode) : null,
-      penugasanSd, cod, garansi, nilai: parseNum(g('Nilai Kontrak Akhir')), aktivitas: g('Aktivitas'), issues,
-      habisSebelumCod: !!(penugasanSd && cod && penugasanSd < cod && g('Progres Aktual (%)') && !(aktual >= 100)),
-      _f: [
-        ['Kode Lokasi', g('Kode Lokasi')], ['No. Paket', g('No')], ['PSO', pso], ['Jenis', g('Jenis')], ['Milestone', g('Milestone')],
-        ['Nama Proyek', g('Nama Proyek')], ['Pemberi Tugas', g('Pemberi Tugas')], ['Direksi Pekerjaan', g('Direksi Pekerjaan')],
-        ['Kontraktor', g('Kontraktor')], ['No. Kontrak', g('No Kontrak')], ['Nilai Kontrak Akhir', g('Nilai Kontrak Akhir')],
-        ['Progres Aktual', g('Progres Aktual (%)')], ['Progres Plan', g('Progres Plan(%)')],
-        ['Deviasi (poin)', dev === null ? '' : dev.toFixed(2)], ['Status (aturan dashboard)', progressStatus(aktual, plan)],
-        ['Data per', g('Periode')], ['Penugasan s.d.', g('Jangka Waktu Penugasan')], ['COD Kontrak', g('COD Kontrak')],
-        ['COD Amandemen', g('COD Amandemen')], ['Bank Garansi s.d.', g('Masa Berlaku Bank Garansi')], ['Kapasitas', `${g('Kapasitas')} ${g('Satuan Kapasitas')}`.trim()],
-        ['Lingkup', g('Detail')], ['Aktivitas periode ini', g('Aktivitas')],
-        ...issues.flatMap((x, i) => [[`Isu ${i + 1}`, x.kategori], [`Detail isu ${i + 1}`, x.detail], [`Tindak lanjut ${i + 1}`, x.tl]]),
-        ['RLB', g('RLB')], ['Energize', g('Energize')], ['SLO', g('SLO')], ['BAST 1', g('BAST 1')], ['BAST 2', g('BAST 2')],
-      ],
-    });
+    out.push(makePackage({
+      kode: g('Kode Lokasi'), no: g('No'), pso, jenis: g('Jenis'), milestone: g('Milestone'), nama: g('Nama Proyek'),
+      kontraktor: g('Kontraktor'), direksi: g('Direksi Pekerjaan'), pemberi: g('Pemberi Tugas'), noKontrak: g('No Kontrak'),
+      aktual: g('Progres Aktual (%)'), plan: g('Progres Plan(%)'), periode: g('Periode'), penugasanSd: g('Jangka Waktu Penugasan'),
+      codAmd: g('COD Amandemen'), codKontrak: g('COD Kontrak'), garansi: g('Masa Berlaku Bank Garansi'), nilai: g('Nilai Kontrak Akhir'),
+      aktivitas: g('Aktivitas'), issues, lingkup: `${g('Detail')} ${g('Kapasitas') ? `(${g('Kapasitas')} ${g('Satuan Kapasitas')})` : ''}`.trim(),
+      dokumen: [['RLB', 'RLB'], ['Energize', 'Energize'], ['SLO', 'SLO'], ['BAST 1', 'BAST 1'], ['BAST 2', 'BAST 2']].map(([jenis, c]) => ({ jenis, isi: g(c) })).filter((x) => x.isi && x.isi !== '-'),
+    }));
   }
   return out;
+}
+
+// Gabungan tab Proyek + Progres_Bulanan + Isu dari template Google Sheet (format tabel panjang)
+function buildFromTemplate(proyek, progres, isu, dokumen) {
+  const latest = new Map();
+  for (const r of progres) {
+    const d = parseDate(r.Periode);
+    const cur = latest.get(r.ID_Paket);
+    if (r.ID_Paket && d && (!cur || d > cur.d)) latest.set(r.ID_Paket, { d, r });
+  }
+  return proyek.filter((p) => p.ID_Paket && p.Nama_Proyek).map((p) => {
+    const pr = (latest.get(p.ID_Paket) || { r: {} }).r;
+    const issues = isu.filter((x) => x.ID_Paket === p.ID_Paket && !/^closed$/i.test(x.Status_Isu)).map((x) => ({ kategori: x.Kategori, detail: x.Detail_Isu, tl: x.Tindak_Lanjut, pic: x.PIC_Tindak_Lanjut, target: x.Target_Selesai, status: x.Status_Isu || 'Open' }));
+    return makePackage({
+      id: p.ID_Paket, kode: p.Kode_Lokasi, no: p.No_Paket, pso: p.PSO, jenis: p.Jenis, milestone: pr.Milestone || '', nama: p.Nama_Proyek, kontraktor: p.Kontraktor,
+      direksi: p.Direksi_Pekerjaan, pemberi: p.Pemberi_Tugas, noKontrak: p.No_Kontrak, aktual: pr.Progres_Aktual, plan: pr.Progres_Plan,
+      periode: pr.Tgl_Data || pr.Periode, penugasanSd: p.Akhir_Penugasan, codAmd: p.COD_Amandemen, codKontrak: p.COD_Kontrak,
+      garansi: p['Bank_Garansi_s.d.'], nilai: p.Nilai_Kontrak_Akhir, aktivitas: pr.Aktivitas_Periode || '', issues,
+      lingkup: `${p.Detail_Lingkup || ''} ${p.Kapasitas ? `(${p.Kapasitas} ${p.Satuan || ''})` : ''}`.trim(),
+      dokumen: dokumen.filter((x) => x.ID_Paket === p.ID_Paket).map((x) => ({ jenis: x.Jenis_Dokumen, isi: [x.Nomor_Dokumen, x.Tanggal_Dokumen, x.Keterangan_Asli].filter(Boolean).join(' · ') })).filter((x) => x.isi),
+    });
+  });
 }
 
 function normalizeRekapPengawas(grid) {

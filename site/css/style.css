@@ -722,3 +722,30 @@ button:focus-visible, [tabindex]:focus-visible, input:focus-visible {
 .report-table tr.clickable { cursor: pointer; }
 .report-table tr.clickable:hover td { background: var(--bg); }
 .periode-chip { display: inline-block; margin-left: 10px; padding: 3px 12px; border-radius: 999px; background: var(--blue-bg); color: var(--blue); font-size: 13px; font-weight: 700; vertical-align: middle; }
+
+/* Kartu detail paket */
+
+.pkg-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.pkg-dev { font-size: 13px; font-weight: 700; color: var(--navy); }
+.pkg-meta { font-size: 13px; color: var(--text-muted); }
+.pk-bar { display: grid; grid-template-columns: 52px 1fr 64px; align-items: center; gap: 12px; font-size: 13px; margin-bottom: 8px; }
+.pk-bar b { text-align: right; font-variant-numeric: tabular-nums; }
+.pk-track { height: 10px; background: var(--border-light); border-radius: 99px; overflow: hidden; display: block; }
+.pk-track i { display: block; height: 100%; border-radius: 99px; }
+.pkg-alerts { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 4px; }
+.pkg-alerts .badge { white-space: normal; line-height: 1.4; }
+.pkg-h { font-size: 12px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--text-faint); margin: 24px 0 10px; display: flex; gap: 8px; align-items: center; }
+.pkg-h span { background: var(--red-bg); color: var(--red); border-radius: 999px; padding: 1px 9px; font-size: 11px; }
+.issue { border: 1px solid var(--border); border-left: 4px solid var(--red); border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; background: #fff; }
+.issue-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.issue-cat { font-weight: 700; font-size: 14px; color: var(--navy); }
+.issue-detail { margin: 8px 0 0; font-size: 13px; line-height: 1.6; }
+.issue-tl { margin: 10px 0 0; font-size: 13px; line-height: 1.6; background: var(--bg); border-radius: 8px; padding: 10px 12px; }
+.issue-tl b { display: block; font-size: 11px; letter-spacing: 0.4px; text-transform: uppercase; color: var(--text-faint); margin-bottom: 3px; }
+.issue-meta { margin: 8px 0 0; font-size: 12px; color: var(--text-muted); }
+.pkg-text { font-size: 13px; line-height: 1.7; margin: 0; max-width: 78ch; }
+.record.compact { grid-template-columns: 180px 1fr; font-size: 13px; }
+.record.compact dt, .record.compact dd { padding-top: 7px; padding-bottom: 7px; }
+.pkg-docs { margin-top: 18px; font-size: 13px; }
+.pkg-docs summary { cursor: pointer; font-weight: 600; color: var(--blue); }
+.pkg-foot { margin: 22px 0 0; font-size: 12px; color: var(--text-faint); }
