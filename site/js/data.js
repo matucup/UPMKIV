@@ -325,3 +325,22 @@ function normalizeTable(grid, required) {
   const cols = h.cells.map((c, i) => [clean(c), i]).filter(([c]) => c);
   return grid.slice(h.row + 1).filter((r) => r.some((c) => clean(c))).map((r) => Object.fromEntries(cols.map(([c, i]) => [c, clean(r[i])])));
 }
+
+function normalizeAdkon(grid) {
+  const h = findHeader(grid, ['KODE LOKASI', 'NAMA PROYEK', 'REALISASI RBT']);
+  if (!h) throw new Error('Header Adkon tidak ditemukan');
+  const out = [];
+  for (const row of grid.slice(h.row + 1)) {
+    const g = (n) => cellAt(row, h, n);
+    if (norm(g('UPMK New')) !== 'upmk iv' || !g('KODE LOKASI')) continue;
+    const rbt = parseNum(g('RENCANA BIAYA TUNAI (RBT)'));
+    const real = parseNum(g('REALISASI RBT'));
+    out.push({
+      kode: g('KODE LOKASI'), nama: g('NAMA PROYEK'), status: g('STATUS'), jenis: g('JENIS'), subJenis: g('SUB SUB JENIS'),
+      rbt, realisasi: real, bulanIni: parseNum(g('REALISASI RBT BULAN INI')), periode: parseDate(g('PERIODE')),
+      akhirPenugasan: parseDate(g('Akhir Penugasan')), sisaMM: parseNum(g('SISA MAN-MONTH')), pic: g('PIC Adkon'),
+      serapan: rbt && real !== null ? (real / rbt) * 100 : null,
+    });
+  }
+  return out;
+}

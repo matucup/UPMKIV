@@ -749,3 +749,6 @@ button:focus-visible, [tabindex]:focus-visible, input:focus-visible {
 .pkg-docs { margin-top: 18px; font-size: 13px; }
 .pkg-docs summary { cursor: pointer; font-weight: 600; color: var(--blue); }
 .pkg-foot { margin: 22px 0 0; font-size: 12px; color: var(--text-faint); }
+.mini-row.four { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); margin-bottom: 20px; }
+.mini .stat-value { overflow-wrap: anywhere; }
+.report-table td.num { white-space: nowrap; }

@@ -26,6 +26,14 @@ const issueList = (title, rows) => ({
   card: (r, cfg) => openPackageCard(r.p, cfg),
 });
 
+function costFor(p) {
+  const rows = (S && S.adkon) || [];
+  const c = rows.find((x) => x.kode === p.kode);
+  if (!c) return null;
+  const siblings = (S.datalist || []).filter((x) => x.kode === p.kode).length;
+  return { ...c, siblings };
+}
+
 function packageAlerts(p) {
   const out = [];
   const done = p.status === 'Selesai';
@@ -42,6 +50,13 @@ function alerts() {
   return S.datalist.flatMap((p) => packageAlerts(p).filter((x) => x.tag !== 'Data perlu update')).sort((a, b) => a.sev - b.sev || a.days - b.days);
 }
 
+function costBlock(p, bar) {
+  const c = costFor(p);
+  if (!c || !c.rbt) return '';
+  const sel = c.serapan !== null && p.aktual !== null ? c.serapan - p.aktual : null;
+  return `<h3 class="pkg-h">Penyerapan biaya penugasan</h3>${bar('Serapan', c.serapan, '#5B6B7F')}<p class="pkg-text">Realisasi ${fmtRp(c.realisasi ?? 0)} dari RBT ${fmtRp(c.rbt)}${c.bulanIni ? `, bulan ini ${fmtRp(c.bulanIni)}` : ''}.${sel !== null ? ` Serapan ${sel >= 0 ? 'lebih tinggi' : 'lebih rendah'} ${Math.abs(sel).toLocaleString('id-ID', { maximumFractionDigits: 1 })} poin dari progres fisik.` : ''}${c.siblings > 1 ? ` Biaya dihitung per penugasan (kode ${esc(c.kode)}), berlaku untuk ${c.siblings} paket.` : ''}</p>`;
+}
+
 function openPackageCard(p, backCfg) {
   const bar = (label, v, color) => `<div class="pk-bar"><span>${label}</span><span class="pk-track"><i style="width:${Math.min(100, v ?? 0)}%;background:${color}"></i></span><b>${fmtPct(v)}</b></div>`;
   const issues = p.issues.length
@@ -53,6 +68,7 @@ function openPackageCard(p, backCfg) {
     <div class="pkg-top"><span class="badge ${STATUS_BADGE[p.status]}">${esc(p.status)}</span><span class="pkg-dev">${p.dev === null ? '' : `deviasi ${fmtDev(p.dev)} poin`}</span><span class="pkg-meta">${esc(p.pso)}${p.jenis ? ` · ${esc(p.jenis)}` : ''}${p.milestone ? ` · ${esc(p.milestone)}` : ''}</span></div>
     ${bar('Aktual', p.aktual, STATUS_COLOR[p.status] || '#2D6CDF')}${bar('Plan', p.plan, '#7C93B3')}
     ${al.length ? `<div class="pkg-alerts">${al.map((x) => `<span class="badge ${x.sev === 0 || x.days < 0 ? 'badge-late' : 'badge-warning'}" title="${esc(x.text)}">${esc(x.tag)}: ${esc(x.text)}</span>`).join('')}</div>` : ''}
+    ${costBlock(p, bar)}
     <h3 class="pkg-h">Permasalahan dan tindak lanjut <span>${p.issues.length}</span></h3>${issues}
     <h3 class="pkg-h">Aktivitas periode ini</h3><p class="pkg-text">${esc(p.aktivitas) || '<span class="empty">Belum diisi.</span>'}</p>
     <h3 class="pkg-h">Kontrak dan penugasan</h3><dl class="record compact">${kv.map(([l, v]) => `<dt>${esc(l)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>

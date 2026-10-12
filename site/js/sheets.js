@@ -4,6 +4,7 @@ const SOURCES = {
   mm: { id: '1Jo3wbnkjSHSm4auaM1fDVyLyRRntSIRSyHeCcCKY81c', sheet: '[LIVE]MM' },
   tad: { id: '1hIXrBaY6H9nPW7gKyrH0Ld7pQ9CHV3MASPuEbkGVtEo', sheet: 'DATA' },
   datalist: { id: '1KbakwavXHcx_7JYVfBMvqUSY7tf__x_-so3vePM6dDg', sheet: 'Datalist_Pusmanpro' },
+  adkon: { id: '1H3A4ti0xQGOeKvSJEzXLYqCns25kjoGuUwIO7z7gbvM', sheet: 'Adkon' },
   rekap: { id: '1rH6dQf_bBBVe2ClHYWXxqD7uS76gRx29TiFB43gEoKg', sheet: 'Rekap Jumlah Pengawas' },
   pa: { id: '1rH6dQf_bBBVe2ClHYWXxqD7uS76gRx29TiFB43gEoKg', sheet: 'Monitoring PA' },
   pengadaan: { id: '1rH6dQf_bBBVe2ClHYWXxqD7uS76gRx29TiFB43gEoKg', sheet: 'Monitoring Pengadaan' },
@@ -12,7 +13,7 @@ const SOURCES = {
 const LAPORAN_TABS = {
   lap_kpi: 'Laporan_KPI', lap_matlev: 'Matlev_ERM', lap_patuh: 'Kepatuhan', lap_idd: 'IDD_Mitra',
   lap_kegiatan: 'Kegiatan', lap_kontrak: 'Kontrak_Status', lap_alih: 'Pengalihan_Anggaran',
-  lap_proyek: 'Proyek', lap_progres: 'Progres_Bulanan', lap_isu: 'Isu', lap_dok: 'Dokumen_Milestone', lap_biaya: 'Realisasi_Biaya',
+  lap_proyek: 'Proyek', lap_progres: 'Progres_Bulanan', lap_isu: 'Isu', lap_dok: 'Dokumen_Milestone',
 };
 for (const [k, sheet] of Object.entries(LAPORAN_TABS)) SOURCES[k] = { id: typeof LAPORAN_ID === 'undefined' ? '' : LAPORAN_ID, sheet };
 
