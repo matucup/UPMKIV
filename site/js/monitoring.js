@@ -6,9 +6,10 @@ async function refresh() {
   $('updated').textContent = 'Memuat data dari Google Sheets…';
   const [mon, cost] = await Promise.all([loadMonitoring(), loadSources(JOBS)]);
   S = { datalist: mon.rows, adkon: cost.data.adkon };
+  S.pen = buildPenugasan(S.adkon, S.datalist);
   showBanner([...mon.failed, ...cost.failed]);
-  renderProgressKpis(); renderPso(); renderAttention(); renderIssues(); renderAlerts();
-  $('updated').textContent = `Sumber: ${mon.source} · ${S.datalist.length} paket · Diperbarui ${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`;
+  renderProgressKpis(); renderPso(); renderAttention(); renderIssues(); renderAlerts(); renderPenugasan();
+  $('updated').textContent = `Sumber: ${mon.source} · ${S.datalist.length} kontrak · ${S.pen.length} penugasan · Diperbarui ${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`;
   $('refresh').disabled = false;
 }
 

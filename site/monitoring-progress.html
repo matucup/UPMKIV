@@ -17,7 +17,7 @@
       <div class="page-header">
         <div>
           <h1>Monitoring Progress Proyek</h1>
-          <p>Progres aktual dibanding plan seluruh paket yang disupervisi PUSMANPRO, lengkap dengan isu, tindak lanjut, dan peringatan kontrak. Status dihitung seragam: Hijau jika deviasi &ge; &minus;5 poin, Kuning hingga &minus;10, Merah di bawahnya.</p>
+          <p>Dua sudut pandang: kontrak proyek (progres fisik, isu, tindak lanjut) dan surat penugasan (masa penugasan dan biaya RBT). Satu penugasan dapat memayungi beberapa kontrak. Status kontrak dihitung seragam: Hijau jika deviasi &ge; &minus;5 poin, Kuning hingga &minus;10, Merah di bawahnya.</p>
         </div>
         <div class="refresh-box">
           <span id="updated" class="updated" aria-live="polite"></span>
@@ -27,11 +27,12 @@
 
       <div id="banner" class="banner" role="status" hidden></div>
 
+      <h3 class="section-title">Kontrak proyek</h3>
       <div class="stats-grid five" id="kpis"></div>
 
       <div class="panels-grid even">
         <section class="card panel">
-          <div class="panel-header"><h2>Status paket per PSO</h2></div>
+          <div class="panel-header"><h2>Status kontrak per PSO</h2></div>
           <div id="pso-board" class="bar-list"></div>
           <div id="legend-status" class="legend status-legend"></div>
         </section>
@@ -44,19 +45,28 @@
       <div class="panels-grid even">
         <section class="card panel">
           <div class="panel-header">
-            <div><h2>Paket perlu perhatian</h2><p class="panel-sub" id="attention-count"></p></div>
+            <div><h2>Kontrak perlu perhatian</h2><p class="panel-sub" id="attention-count"></p></div>
             <button type="button" id="attention-all" class="link-btn">Lihat semua &rarr;</button>
           </div>
           <div id="attention" class="item-list"></div>
         </section>
         <section class="card panel">
           <div class="panel-header">
-            <div><h2>Peringatan kontrak dan penugasan</h2><p class="panel-sub" id="alerts-count"></p></div>
+            <div><h2>Peringatan penugasan dan bank garansi</h2><p class="panel-sub" id="alerts-count"></p></div>
             <button type="button" id="alerts-all" class="link-btn">Lihat semua &rarr;</button>
           </div>
           <div id="alerts" class="item-list"></div>
         </section>
       </div>
+
+      <h3 class="section-title">Surat penugasan dan biaya</h3>
+      <section class="card panel">
+        <div class="panel-header">
+          <div><h2>Penugasan PUSMANPRO</h2><p class="panel-sub" id="pen-note"></p></div>
+          <button type="button" id="pen-all" class="link-btn">Lihat semua &rarr;</button>
+        </div>
+        <div id="pen-table"></div>
+      </section>
     </div>
   </main>
 </div>

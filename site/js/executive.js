@@ -29,8 +29,8 @@ function renderExecKpis() {
   const mmTotal = mm.rows.reduce((a, r) => a + r.vals.slice(win.start, win.end).reduce((x, y) => x + y, 0), 0);
   const late = tad.filter((t) => t.late > 0).length;
   const cards = [
-    { label: 'Paket dimonitor', value: d.length, sub: `${d.filter((p) => p.status === 'Selesai').length} selesai · ${d.filter((p) => !['Selesai', 'Belum mulai'].includes(p.status)).length} konstruksi aktif`, open: () => openList(pkgList('Semua paket', d)) },
-    { label: 'Merah / Kuning', value: `${d.filter((p) => p.status === 'Merah').length} / ${d.filter((p) => p.status === 'Kuning').length}`, sub: 'paket menyimpang dari plan', open: () => openList(pkgList('Paket Merah dan Kuning', d.filter((p) => ['Merah', 'Kuning'].includes(p.status)).sort((a, b) => a.dev - b.dev))) },
+    { label: 'Kontrak dimonitor', value: d.length, sub: `${d.filter((p) => p.status === 'Selesai').length} selesai · ${d.filter((p) => !['Selesai', 'Belum mulai'].includes(p.status)).length} konstruksi aktif`, open: () => openList(pkgList('Semua kontrak', d)) },
+    { label: 'Merah / Kuning', value: `${d.filter((p) => p.status === 'Merah').length} / ${d.filter((p) => p.status === 'Kuning').length}`, sub: 'paket menyimpang dari plan', open: () => openList(pkgList('Kontrak Merah dan Kuning', d.filter((p) => ['Merah', 'Kuning'].includes(p.status)).sort((a, b) => a.dev - b.dev))) },
     { label: 'Pengawas lapangan', value: rekap.total ? rekap.total.total : '-', sub: rekap.total ? `${rekap.total.sc} SC · ${rekap.total.pengawas} pengawas · ${rekap.total.tad} TAD` : 'rekap belum terbaca', open: () => $('sdm').scrollIntoView({ behavior: 'smooth' }) },
     { label: 'Man-month 6 bulan', value: fmt(mmTotal), sub: wm.length ? `${wm[0].label} – ${wm[wm.length - 1].label}` : 'belum ada data', open: () => { window.location.href = 'index.html'; } },
     { label: 'Permintaan TAD', value: tad.length, sub: `${late} terlambat mobilisasi`, open: () => { window.location.href = 'index.html'; } },
@@ -55,21 +55,20 @@ function renderPa() {
 }
 
 function renderBiaya(rows) {
-  const prog = (kode) => { const d = S.datalist.filter((p) => p.kode === kode && p.aktual !== null); return d.length ? d.reduce((a, p) => a + p.aktual, 0) / d.length : null; };
-  const list = rows.map((r) => ({ ...r, progres: prog(r.kode) })).map((r) => ({ ...r, sel: r.serapan !== null && r.progres !== null ? r.serapan - r.progres : null }));
+  const list = S.pen.filter((r) => r.rbt);
   const tot = list.reduce((a, r) => ({ rbt: a.rbt + r.rbt, real: a.real + (r.realisasi || 0), bln: a.bln + (r.bulanIni || 0) }), { rbt: 0, real: 0, bln: 0 });
-  const per = list.find((r) => r.periode);
-  $('pa-note').textContent = `RBT dan realisasi RBT per penugasan, sumber tab Adkon${per ? ` (periode ${fmtDate(per.periode)})` : ''}`;
+  const per = rows.find((r) => r.periode);
+  $('pa-note').textContent = `RBT dan realisasi RBT per surat penugasan, sumber tab Adkon${per ? ` (periode ${fmtDate(per.periode)})` : ''}. Progres fisik adalah rata-rata kontrak di bawah penugasan itu.`;
   const avg = (arr, f) => { const v = arr.map(f).filter((x) => x !== null); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
-  const byJenis = ['Transmisi', 'Gardu Induk'].map((j) => { const x = list.filter((r) => r.jenis === j && r.status === 'OPEN'); return { j, n: x.length, s: avg(x, (r) => r.serapan), p: avg(x, (r) => r.progres) }; }).filter((x) => x.n);
+  const byJenis = ['Transmisi', 'Gardu Induk'].map((j) => { const x = list.filter((r) => r.jenis === j && r.statusAdkon === 'OPEN'); return { j, n: x.length, s: avg(x, (r) => r.serapan), p: avg(x, (r) => r.aktual) }; }).filter((x) => x.n);
   const mini = [['RBT total', fmtRp(tot.rbt), `${list.length} penugasan`], ['Realisasi RBT', fmtRp(tot.real), `${fmtPct((tot.real / tot.rbt) * 100)} dari RBT`], ['Realisasi bulan ini', fmtRp(tot.bln), 'tambahan periode berjalan'],
     ...byJenis.map((x) => [`Rata-rata ${x.j}`, `${fmtPct(x.s)} serapan`, `progres fisik ${fmtPct(x.p)} (${x.n} penugasan OPEN)`])];
-  const row = (r, i) => `<tr class="clickable" tabindex="0" data-i="${i}"><td>${esc(r.nama)}<div class="item-sub">${esc(r.kode)} · ${esc(r.jenis)} · ${esc(r.status)}</div></td><td class="num">${fmtRp(r.rbt)}</td><td class="num">${r.realisasi === null ? '-' : fmtRp(r.realisasi)}</td><td class="num">${fmtPct(r.serapan)}</td><td class="num">${fmtPct(r.progres)}</td><td class="num">${r.sel === null ? '-' : `<span class="badge ${Math.abs(r.sel) > 25 ? 'badge-warning' : 'badge-muted'}">${fmtDev(r.sel)}</span>`}</td></tr>`;
   const sorted = [...list].sort((a, b) => Math.abs(b.sel ?? 0) - Math.abs(a.sel ?? 0));
-  $('pa').innerHTML = `<div class="mini-row four">${mini.map(([l, v, s]) => `<div class="mini"><div class="stat-label">${esc(l)}</div><div class="stat-value">${esc(v)}</div><div class="stat-sub">${esc(s)}</div></div>`).join('')}</div><div class="table-scroll"><table class="report-table"><thead><tr><th>Penugasan</th><th class="num">RBT</th><th class="num">Realisasi</th><th class="num">Serapan</th><th class="num">Progres fisik</th><th class="num">Selisih (poin)</th></tr></thead><tbody>${sorted.map(row).join('')}</tbody></table></div><p class="panel-sub" style="margin-top:10px">Selisih = serapan dikurangi progres fisik rata-rata paket pada penugasan itu. Selisih besar berarti biaya berjalan jauh di depan atau di belakang pekerjaan. Klik baris untuk membuka paketnya.</p>`;
-  const open = (i) => { const r = sorted[i]; const pk = S.datalist.filter((p) => p.kode === r.kode); if (pk.length === 1) openPackageCard(pk[0]); else if (pk.length) openList(pkgList(`Paket pada penugasan ${r.nama}`, pk)); };
-  $('pa').onclick = (e) => { const tr = e.target.closest('tr[data-i]'); if (tr) open(+tr.dataset.i); };
-  $('pa').onkeydown = (e) => { const tr = e.target.closest('tr[data-i]'); if (tr && e.key === 'Enter') open(+tr.dataset.i); };
+  const row = (r, i) => `<tr class="clickable" tabindex="0" data-i="${i}"><td>${esc(r.nama)}<div class="item-sub">${esc(r.kode)} · ${esc(r.jenis)} · ${esc(r.statusAdkon)}${r.kontrak.length ? ` · ${r.kontrak.length} kontrak` : ' · belum ada kontrak terpantau'}</div></td><td class="num">${fmtRp(r.rbt)}</td><td class="num">${r.realisasi === null ? '-' : fmtRp(r.realisasi)}</td><td class="num">${fmtPct(r.serapan)}</td><td class="num">${fmtPct(r.aktual)}</td><td class="num">${r.sel === null ? '-' : `<span class="badge ${Math.abs(r.sel) > 25 ? 'badge-warning' : 'badge-muted'}">${fmtDev(r.sel)}</span>`}</td></tr>`;
+  $('pa').innerHTML = `<div class="mini-row four">${mini.map(([l, v, s]) => `<div class="mini"><div class="stat-label">${esc(l)}</div><div class="stat-value">${esc(v)}</div><div class="stat-sub">${esc(s)}</div></div>`).join('')}</div><div class="table-scroll"><table class="report-table"><thead><tr><th>Surat penugasan</th><th class="num">RBT</th><th class="num">Realisasi</th><th class="num">Serapan</th><th class="num">Progres fisik</th><th class="num">Selisih (poin)</th></tr></thead><tbody>${sorted.map(row).join('')}</tbody></table></div><p class="panel-sub" style="margin-top:10px">Selisih = serapan biaya dikurangi progres fisik. Selisih besar berarti biaya berjalan jauh di depan atau di belakang pekerjaan. Klik baris untuk membuka penugasan beserta kontrak-kontraknya.</p>`;
+  const open = (i) => openPenugasanCard(sorted[i], null);
+  $('pa').onclick = (ev) => { const tr = ev.target.closest('tr[data-i]'); if (tr) open(+tr.dataset.i); };
+  $('pa').onkeydown = (ev) => { const tr = ev.target.closest('tr[data-i]'); if (tr && ev.key === 'Enter') open(+tr.dataset.i); };
 }
 
 function renderPengadaan() {
@@ -135,6 +134,7 @@ async function refresh() {
   $('updated').textContent = 'Memuat data dari Google Sheets…';
   const [{ data, failed }, lap, mon] = await Promise.all([loadSources(JOBS), loadLaporan(), loadMonitoring()]);
   S = { ...data, datalist: mon.rows };
+  S.pen = buildPenugasan(S.adkon, S.datalist);
   failed.push(...mon.failed);
   L = lap;
   showBanner([...failed, ...(lap && lap._failed ? lap._failed : [])]);

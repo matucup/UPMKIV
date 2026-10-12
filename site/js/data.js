@@ -329,18 +329,64 @@ function normalizeTable(grid, required) {
 function normalizeAdkon(grid) {
   const h = findHeader(grid, ['KODE LOKASI', 'NAMA PROYEK', 'REALISASI RBT']);
   if (!h) throw new Error('Header Adkon tidak ditemukan');
+  const akhirCols = h.cells.map((c, i) => (norm(c) === 'akhir penugasan' ? i : -1)).filter((i) => i >= 0);
   const out = [];
   for (const row of grid.slice(h.row + 1)) {
     const g = (n) => cellAt(row, h, n);
     if (norm(g('UPMK New')) !== 'upmk iv' || !g('KODE LOKASI')) continue;
     const rbt = parseNum(g('RENCANA BIAYA TUNAI (RBT)'));
     const real = parseNum(g('REALISASI RBT'));
+    const pst = g('PST Sesuai KEP GM');
+    const lokasi = g('LOKASI');
+    const akhir = akhirCols.map((i) => parseDate(row[i])).find(Boolean) || null;
     out.push({
-      kode: g('KODE LOKASI'), nama: g('NAMA PROYEK'), status: g('STATUS'), jenis: g('JENIS'), subJenis: g('SUB SUB JENIS'),
+      kode: g('KODE LOKASI'), nama: g('NAMA PROYEK'), judul: g('Judul STg'), noSurat: g('NOSurat Penugasan'), amandemen: g('Amandemen Terakhir'),
+      status: g('STATUS'), jenis: g('JENIS'), subJenis: g('SUB SUB JENIS'), pso: /^PSO /i.test(pst) ? pst.replace(/^PSO /i, '').replace(/ dan PSO /i, ' & ') : lokasi || 'Lainnya',
       rbt, realisasi: real, bulanIni: parseNum(g('REALISASI RBT BULAN INI')), periode: parseDate(g('PERIODE')),
-      akhirPenugasan: parseDate(g('Akhir Penugasan')), sisaMM: parseNum(g('SISA MAN-MONTH')), pic: g('PIC Adkon'),
+      mulai: parseDate(g('Mulai Penugasan')), akhir, sisaMM: parseNum(g('SISA MAN-MONTH')),
       serapan: rbt && real !== null ? (real / rbt) * 100 : null,
     });
   }
   return out;
+}
+
+const STATUS_RANK = { Merah: 0, Kuning: 1, Hijau: 2, 'Belum mulai': 3, Selesai: 4, 'Belum dilaporkan': 5 };
+
+// Satu penugasan (surat penugasan, memegang biaya RBT) dapat memayungi banyak kontrak proyek (memegang progres fisik).
+function buildPenugasan(adkon, kontrak) {
+  const map = new Map();
+  for (const a of adkon) map.set(a.kode, { kode: a.kode, adkon: a, kontrak: [] });
+  for (const p of kontrak) {
+    if (!map.has(p.kode)) map.set(p.kode, { kode: p.kode, adkon: null, kontrak: [] });
+    map.get(p.kode).kontrak.push(p);
+  }
+  const wavg = (ks, f) => {
+    const v = ks.filter((k) => f(k) !== null);
+    if (!v.length) return null;
+    const useVal = v.every((k) => k.nilai);
+    const w = (k) => (useVal ? k.nilai : 1);
+    return v.reduce((s, k) => s + f(k) * w(k), 0) / v.reduce((s, k) => s + w(k), 0);
+  };
+  return [...map.values()].map((e) => {
+    const a = e.adkon;
+    const ks = e.kontrak;
+    const aktual = wavg(ks, (k) => k.aktual);
+    const plan = wavg(ks, (k) => k.plan);
+    const worst = ks.length ? ks.map((k) => k.status).sort((x, y) => STATUS_RANK[x] - STATUS_RANK[y])[0] : null;
+    const akhir = (a && a.akhir) || (ks.find((k) => k.penugasanSd) || {}).penugasanSd || null;
+    const cods = ks.filter((k) => k.cod && k.aktual !== null && k.aktual < 100).map((k) => k.cod);
+    const codMax = cods.length ? new Date(Math.max(...cods)) : null;
+    const first = ks[0] || {};
+    return {
+      kode: e.kode, adkon: a, kontrak: ks,
+      nama: (a && a.nama) || first.nama || e.kode, judul: (a && a.judul) || '', noSurat: (a && a.noSurat) || '',
+      pso: titleCase((a && a.pso) || first.pso || 'Lainnya'), jenis: (a && a.jenis) || first.jenis || '', statusAdkon: (a && a.status) || '',
+      rbt: a ? a.rbt : null, realisasi: a ? a.realisasi : null, bulanIni: a ? a.bulanIni : null, serapan: a ? a.serapan : null,
+      sisaMM: a ? a.sisaMM : null, mulai: a ? a.mulai : null, amandemen: a ? a.amandemen : '',
+      aktual, plan, dev: aktual !== null && plan !== null ? aktual - plan : null, worst, akhir, sisaHari: daysUntil(akhir), codMax,
+      sel: a && a.serapan !== null && aktual !== null ? a.serapan - aktual : null,
+      habisSebelumCod: !!(akhir && codMax && akhir < codMax),
+      issues: ks.flatMap((k) => k.issues.map((x) => ({ ...x, k }))),
+    };
+  });
 }

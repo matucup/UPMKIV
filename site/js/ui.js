@@ -92,8 +92,8 @@ function openRecord(cfg, row) {
 function openCard(title, sub, html, backCfg) {
   $('modal-title').textContent = title;
   $('modal-sub').textContent = sub || '';
-  $('modal-tools').innerHTML = backCfg ? '<button type="button" class="back" id="modal-back">← Kembali ke daftar</button>' : '';
-  if (backCfg) $('modal-back').onclick = () => openList(backCfg);
+  $('modal-tools').innerHTML = backCfg ? '<button type="button" class="back" id="modal-back">← Kembali</button>' : '';
+  if (backCfg) $('modal-back').onclick = typeof backCfg === 'function' ? backCfg : () => openList(backCfg);
   $('modal-body').onclick = null;
   $('modal-body').onkeydown = null;
   $('modal-body').innerHTML = html;
