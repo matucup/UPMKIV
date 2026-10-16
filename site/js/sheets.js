@@ -18,7 +18,7 @@ const LAPORAN_TABS = {
 for (const [k, sheet] of Object.entries(LAPORAN_TABS)) SOURCES[k] = { id: typeof LAPORAN_ID === 'undefined' ? '' : LAPORAN_ID, sheet };
 
 function gvizUrl(src, extra) {
-  return `https://docs.google.com/spreadsheets/d/${src.id}/gviz/tq?sheet=${encodeURIComponent(src.sheet)}&headers=0&tqx=${extra}`;
+  return `https://docs.google.com/spreadsheets/d/${src.id}/gviz/tq?sheet=${encodeURIComponent(src.sheet)}&headers=1&tqx=${extra}`;
 }
 
 function parseCsv(text) {
@@ -57,7 +57,8 @@ function fetchJsonpGrid(src) {
     window[cb] = (resp) => {
       done();
       if (!resp || !resp.table) return reject(new Error('Respons tidak valid'));
-      resolve(resp.table.rows.map((r) => (r.c || []).map((c) => (c ? (c.f ?? c.v ?? '') : '')).map(String)));
+      const labels = resp.table.cols.map((c) => c.label || '');
+      resolve([labels].concat(resp.table.rows.map((r) => (r.c || []).map((c) => (c ? (c.f ?? c.v ?? '') : '')).map(String))));
     };
     script.onerror = () => { done(); reject(new Error('Gagal memuat')); };
     script.src = gvizUrl(src, `out:json;responseHandler:${cb}`);
@@ -74,7 +75,7 @@ async function loadSheet(src) {
 }
 
 // Diagnostik: bila pembacaan gagal, sertakan versi dan cuplikan baris awal yang benar-benar diterima dari Google.
-const BUILD = 'induk-2';
+const BUILD = 'induk-3';
 function gridHint(grid) {
   if (!Array.isArray(grid)) return '';
   const rows = grid.slice(0, 5).map((r, i) => `b${i + 1}: ${r.slice(0, 6).map((c) => String(c).replace(/\s+/g, ' ').slice(0, 16)).join(' | ')}`).join(' // ');
