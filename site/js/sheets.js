@@ -1,13 +1,13 @@
 const SOURCES = {
-  proyek: { id: '1rH6dQf_bBBVe2ClHYWXxqD7uS76gRx29TiFB43gEoKg', sheet: 'Daftar Proyek' },
-  personil: { id: '1Jo3wbnkjSHSm4auaM1fDVyLyRRntSIRSyHeCcCKY81c', sheet: 'Personil' },
-  mm: { id: '1Jo3wbnkjSHSm4auaM1fDVyLyRRntSIRSyHeCcCKY81c', sheet: '[LIVE]MM' },
-  tad: { id: '1hIXrBaY6H9nPW7gKyrH0Ld7pQ9CHV3MASPuEbkGVtEo', sheet: 'DATA' },
-  datalist: { id: '1KbakwavXHcx_7JYVfBMvqUSY7tf__x_-so3vePM6dDg', sheet: 'Datalist_Pusmanpro' },
-  adkon: { id: '1H3A4ti0xQGOeKvSJEzXLYqCns25kjoGuUwIO7z7gbvM', sheet: 'Adkon' },
-  rekap: { id: '1rH6dQf_bBBVe2ClHYWXxqD7uS76gRx29TiFB43gEoKg', sheet: 'Rekap Jumlah Pengawas' },
-  pa: { id: '1rH6dQf_bBBVe2ClHYWXxqD7uS76gRx29TiFB43gEoKg', sheet: 'Monitoring PA' },
-  pengadaan: { id: '1rH6dQf_bBBVe2ClHYWXxqD7uS76gRx29TiFB43gEoKg', sheet: 'Monitoring Pengadaan' },
+  proyek: { id: DATA_ID, sheet: 'Daftar Proyek' },
+  personil: { id: DATA_ID, sheet: 'Personil' },
+  mm: { id: DATA_ID, sheet: 'LIVE_MM' },
+  tad: { id: DATA_ID, sheet: 'DATA' },
+  datalist: { id: DATA_ID, sheet: 'Datalist_Pusmanpro' },
+  adkon: { id: DATA_ID, sheet: 'Adkon' },
+  rekap: { id: DATA_ID, sheet: 'Rekap Jumlah Pengawas' },
+  pa: { id: DATA_ID, sheet: 'Monitoring PA' },
+  pengadaan: { id: DATA_ID, sheet: 'Monitoring Pengadaan' },
 };
 
 const LAPORAN_TABS = {
