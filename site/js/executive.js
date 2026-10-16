@@ -123,7 +123,7 @@ async function loadLaporan() {
   const out = {};
   const failed = [];
   await Promise.all(Object.keys(TABLE_REQ).map(async (k) => {
-    try { out[k] = normalizeTable(await loadSheet(SOURCES[k]), TABLE_REQ[k]); } catch (e) { failed.push(`${SOURCES[k].sheet} (${e.message})`); out[k] = []; }
+    try { out[k] = await parseSheet(SOURCES[k], (g) => normalizeTable(g, TABLE_REQ[k])); } catch (e) { failed.push(`${SOURCES[k].sheet} (${e.message})`); out[k] = []; }
   }));
   if (failed.length) out._failed = failed;
   return out;

@@ -120,7 +120,7 @@ async function loadSources(jobs) {
   const failed = [];
   await Promise.all(Object.entries(jobs).map(async ([k, [fn, empty]]) => {
     try {
-      data[k] = fn(await loadSheet(SOURCES[k]));
+      data[k] = await parseSheet(SOURCES[k], fn);
     } catch (e) {
       failed.push(`${SOURCES[k].sheet} (${e.message})`);
       data[k] = empty;

@@ -126,7 +126,7 @@ async function loadMonitoring() {
   const failed = [];
   if (SOURCES.lap_proyek.id) {
     try {
-      const get = async (k) => normalizeTable(await loadSheet(SOURCES[k]), { lap_proyek: ['ID_Paket', 'Nama_Proyek'], lap_progres: ['Periode', 'ID_Paket', 'Progres_Aktual'], lap_isu: ['ID_Isu', 'ID_Paket'], lap_dok: ['ID_Paket', 'Jenis_Dokumen'] }[k]);
+      const get = async (k) => parseSheet(SOURCES[k], (g) => normalizeTable(g, { lap_proyek: ['ID_Paket', 'Nama_Proyek'], lap_progres: ['Periode', 'ID_Paket', 'Progres_Aktual'], lap_isu: ['ID_Isu', 'ID_Paket'], lap_dok: ['ID_Paket', 'Jenis_Dokumen'] }[k]));
       const [pr, pg, is, dk] = await Promise.all([get('lap_proyek'), get('lap_progres'), get('lap_isu'), get('lap_dok')]);
       const rows = buildFromTemplate(pr, pg, is, dk);
       if (rows.some((r) => r.aktual !== null)) return { rows, source: 'Google Sheet monitoring (template)', failed };
@@ -136,7 +136,7 @@ async function loadMonitoring() {
     }
   }
   try {
-    return { rows: normalizeDatalist(await loadSheet(SOURCES.datalist)), source: 'Datalist_Pusmanpro', failed };
+    return { rows: await parseSheet(SOURCES.datalist, normalizeDatalist), source: 'Datalist_Pusmanpro', failed };
   } catch (e) {
     failed.push(`${SOURCES.datalist.sheet} (${e.message})`);
     return { rows: [], source: '-', failed };

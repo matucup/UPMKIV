@@ -72,3 +72,21 @@ async function loadSheet(src) {
     return fetchJsonpGrid(src);
   }
 }
+
+// Diagnostik: bila pembacaan gagal, sertakan versi dan cuplikan baris awal yang benar-benar diterima dari Google.
+const BUILD = 'induk-2';
+function gridHint(grid) {
+  if (!Array.isArray(grid)) return '';
+  const rows = grid.slice(0, 5).map((r, i) => `b${i + 1}: ${r.slice(0, 6).map((c) => String(c).replace(/\s+/g, ' ').slice(0, 16)).join(' | ')}`).join(' // ');
+  return ` [${BUILD}; ${grid.length} baris; ${rows || 'kosong'}]`;
+}
+
+async function parseSheet(src, fn) {
+  const grid = await loadSheet(src);
+  try {
+    return fn(grid);
+  } catch (e) {
+    e.message += gridHint(grid);
+    throw e;
+  }
+}
