@@ -1,10 +1,10 @@
 const SOURCES = {
   proyek: { id: DATA_ID, sheet: 'Daftar Proyek' },
   personil: { id: DATA_ID, sheet: 'Personil' },
-  mm: { id: DATA_ID, sheet: 'LIVE_MM' },
-  tad: { id: DATA_ID, sheet: 'DATA' },
+  mm: { id: DATA_ID, sheet: 'LIVE_MM', range: 'A3:AM1000' },
+  tad: { id: DATA_ID, sheet: 'DATA', range: 'A4:AC1500' },
   datalist: { id: DATA_ID, sheet: 'Datalist_Pusmanpro' },
-  adkon: { id: DATA_ID, sheet: 'Adkon' },
+  adkon: { id: DATA_ID, sheet: 'Adkon', range: 'A3:BZ1500' },
   rekap: { id: DATA_ID, sheet: 'Rekap Jumlah Pengawas' },
   pa: { id: DATA_ID, sheet: 'Monitoring PA' },
   pengadaan: { id: DATA_ID, sheet: 'Monitoring Pengadaan' },
@@ -17,8 +17,10 @@ const LAPORAN_TABS = {
 };
 for (const [k, sheet] of Object.entries(LAPORAN_TABS)) SOURCES[k] = { id: typeof LAPORAN_ID === 'undefined' ? '' : LAPORAN_ID, sheet };
 
-function gvizUrl(src, extra) {
-  return `https://docs.google.com/spreadsheets/d/${src.id}/gviz/tq?sheet=${encodeURIComponent(src.sheet)}&headers=1&tqx=${extra}`;
+// range: baris judul tab harus menjadi baris pertama (Google membuang teks judul di kolom angka/tanggal bila judul bukan baris pertama).
+function gvizUrl(src, extra, useRange = true) {
+  const range = useRange && src.range ? `&range=${src.range}` : '';
+  return `https://docs.google.com/spreadsheets/d/${src.id}/gviz/tq?sheet=${encodeURIComponent(src.sheet)}${range}&headers=1&tqx=${extra}`;
 }
 
 function parseCsv(text) {
@@ -43,13 +45,13 @@ function parseCsv(text) {
   return rows;
 }
 
-async function fetchCsvGrid(src) {
-  const res = await fetch(gvizUrl(src, 'out:csv'));
+async function fetchCsvGrid(src, useRange) {
+  const res = await fetch(gvizUrl(src, 'out:csv', useRange));
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return parseCsv(await res.text());
 }
 
-function fetchJsonpGrid(src) {
+function fetchJsonpGrid(src, useRange) {
   return new Promise((resolve, reject) => {
     const cb = `__gviz_${Math.random().toString(36).slice(2)}`;
     const script = document.createElement('script');
@@ -61,21 +63,21 @@ function fetchJsonpGrid(src) {
       resolve([labels].concat(resp.table.rows.map((r) => (r.c || []).map((c) => (c ? (c.f ?? c.v ?? '') : '')).map(String))));
     };
     script.onerror = () => { done(); reject(new Error('Gagal memuat')); };
-    script.src = gvizUrl(src, `out:json;responseHandler:${cb}`);
+    script.src = gvizUrl(src, `out:json;responseHandler:${cb}`, useRange);
     document.head.appendChild(script);
   });
 }
 
-async function loadSheet(src) {
+async function loadSheet(src, useRange = true) {
   try {
-    return await fetchCsvGrid(src);
+    return await fetchCsvGrid(src, useRange);
   } catch (e) {
-    return fetchJsonpGrid(src);
+    return fetchJsonpGrid(src, useRange);
   }
 }
 
 // Diagnostik: bila pembacaan gagal, sertakan versi dan cuplikan baris awal yang benar-benar diterima dari Google.
-const BUILD = 'induk-3';
+const BUILD = 'induk-__BUILD__';
 function gridHint(grid) {
   if (!Array.isArray(grid)) return '';
   const rows = grid.slice(0, 5).map((r, i) => `b${i + 1}: ${r.slice(0, 6).map((c) => String(c).replace(/\s+/g, ' ').slice(0, 16)).join(' | ')}`).join(' // ');
@@ -87,6 +89,16 @@ async function parseSheet(src, fn) {
   try {
     return fn(grid);
   } catch (e) {
+    if (src.range) {
+      // Cadangan: bila rentang tidak dikenali Google, coba lagi tanpa rentang.
+      const plain = await loadSheet(src, false);
+      try {
+        return fn(plain);
+      } catch (e2) {
+        e.message += `${gridHint(grid)} | tanpa rentang:${gridHint(plain)}`;
+        throw e;
+      }
+    }
     e.message += gridHint(grid);
     throw e;
   }

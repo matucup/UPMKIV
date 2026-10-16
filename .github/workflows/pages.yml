@@ -24,6 +24,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      - name: Stamp build id (cache busting)
+        run: sed -i "s/__BUILD__/${GITHUB_SHA::7}/g" site/*.html site/js/*.js
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
