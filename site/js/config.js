@@ -4,3 +4,7 @@
 const DATA_ID = '1PRzzDpWvDq8NWcQ2ANYAR_dTQzLGqndbNfc3YZFdQag';
 // Tab template laporan/monitoring (Proyek, Progres_Bulanan, Isu, Laporan_KPI, dst.) ada di spreadsheet yang sama.
 const LAPORAN_ID = DATA_ID;
+
+// Bagian laporan di Executive Summary (KPI, Matlev/ERM, Kepatuhan, IDD, Kegiatan, Kontrak, Pengalihan Anggaran) disembunyikan sampai tab-tabnya diisi data nyata.
+// Ubah menjadi true bila sudah siap ditampilkan.
+const TAMPILKAN_LAPORAN = false;

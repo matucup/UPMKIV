@@ -93,6 +93,7 @@ function renderPengadaan() {
 
 function renderLaporan() {
   const box = $('laporan');
+  if (!TAMPILKAN_LAPORAN) { box.hidden = true; return; }
   if (!L) {
     box.innerHTML = `<div class="card panel pending-card"><strong>Bagian ini belum tersambung ke Google Sheet.</strong><br>Kinerja, kepatuhan, K3 dan keamanan, ERM, IDD mitra, status kontrak, pengalihan anggaran, dan kegiatan khusus tidak ada di spreadsheet yang ada sekarang. Isi tab-tab pada template <em>Monitoring_Progres_PUSMANPRO</em> (sudah berisi data laporan Agustus 2026), unggah ke Google Sheets, lalu isi <code>LAPORAN_ID</code> di <code>js/config.js</code>.</div>`;
     return;
@@ -119,7 +120,7 @@ function renderLaporan() {
 }
 
 async function loadLaporan() {
-  if (!SOURCES.lap_kpi.id) return null;
+  if (!TAMPILKAN_LAPORAN || !SOURCES.lap_kpi.id) return null;
   const out = {};
   const failed = [];
   await Promise.all(Object.keys(TABLE_REQ).map(async (k) => {
