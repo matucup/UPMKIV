@@ -1,5 +1,9 @@
+// Diisi otomatis oleh workflow GitHub Pages dengan kode commit.
+const SIDEBAR_BUILD = '__BUILD__';
+
 const NAV_ITEMS = [
   { href: 'index.html', label: 'Beranda' },
+  { href: 'monitoring-progress.html', label: 'Monitoring Progress' },
   { href: 'sk-pst.html', label: 'SK PST' },
   { href: 'executive-summary.html', label: 'Executive Summary' },
   { href: 'laporan.html', label: 'Laporan' },
@@ -8,7 +12,6 @@ const NAV_ITEMS = [
   { href: 'kajian.html', label: 'Kajian' },
   { href: 'lesson-learn.html', label: 'Lesson Learn' },
   { href: 'pakta-integritas.html', label: 'Pakta Integritas' },
-  { href: 'monitoring-progress.html', label: 'Monitoring Progress' },
   { href: 'sertifikat.html', label: 'Sertifikat' },
   {
     group: 'Project Site Team',
@@ -50,7 +53,7 @@ function renderSidebar() {
       <div class="sidebar-subtitle">Dashboard Manajemen Jaringan</div>
     </div>
     <nav class="sidebar-nav">${parts.join('')}</nav>
-    <div class="sidebar-footer">v1.0 &middot; Sumber: Google Sheets</div>
+    <div class="sidebar-footer">v1.0 &middot; build ${SIDEBAR_BUILD} &middot; Sumber: Google Sheets</div>
   `;
 }
 
