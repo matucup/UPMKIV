@@ -124,22 +124,23 @@ function openPackageCard(p, backCfg) {
 
 async function loadMonitoring() {
   const failed = [];
+  let note = '';
   if (SOURCES.lap_proyek.id) {
     try {
       const get = async (k) => parseSheet(SOURCES[k], (g) => normalizeTable(g, { lap_proyek: ['ID_Paket', 'Nama_Proyek'], lap_progres: ['Periode', 'ID_Paket', 'Progres_Aktual'], lap_isu: ['ID_Isu', 'ID_Paket'], lap_dok: ['ID_Paket', 'Jenis_Dokumen'] }[k]));
       const [pr, pg, is, dk] = await Promise.all([get('lap_proyek'), get('lap_progres'), get('lap_isu'), get('lap_dok')]);
       const rows = buildFromTemplate(pr, pg, is, dk);
       if (rows.some((r) => r.aktual !== null)) return { rows, source: 'Google Sheet monitoring (template)', failed };
-      failed.push('Template monitoring belum berisi progres, memakai datalist lama');
+      note = 'tab Proyek/Progres_Bulanan belum diisi, memakai Datalist_Pusmanpro';
     } catch (e) {
       failed.push(`Template monitoring (${e.message}), memakai datalist lama`);
     }
   }
   try {
-    return { rows: await parseSheet(SOURCES.datalist, normalizeDatalist), source: 'Datalist_Pusmanpro', failed };
+    return { rows: await parseSheet(SOURCES.datalist, normalizeDatalist), source: 'Datalist_Pusmanpro', failed, note };
   } catch (e) {
     failed.push(`${SOURCES.datalist.sheet} (${e.message})`);
-    return { rows: [], source: '-', failed };
+    return { rows: [], source: '-', failed, note };
   }
 }
 

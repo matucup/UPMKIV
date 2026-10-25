@@ -9,7 +9,7 @@ async function refresh() {
   S.pen = buildPenugasan(S.adkon, S.datalist);
   showBanner([...mon.failed, ...cost.failed]);
   renderProgressKpis(); renderPso(); renderAttention(); renderIssues(); renderAlerts(); renderPenugasan();
-  $('updated').textContent = `Sumber: ${mon.source} · ${S.datalist.length} kontrak · ${S.pen.length} penugasan · Diperbarui ${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`;
+  $('updated').textContent = `Sumber: ${mon.source}${mon.note ? ` (${mon.note})` : ''} · ${S.datalist.length} kontrak · ${S.pen.length} penugasan · Diperbarui ${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`;
   $('refresh').disabled = false;
 }
 

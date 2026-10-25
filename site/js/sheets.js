@@ -2,7 +2,7 @@ const SOURCES = {
   proyek: { id: DATA_ID, sheet: 'Daftar Proyek' },
   personil: { id: DATA_ID, sheet: 'Personil' },
   mm: { id: DATA_ID, sheet: 'LIVE_MM', range: 'A3:AM1000' },
-  tad: { id: DATA_ID, sheet: 'DATA', range: 'A4:AC1500' },
+  tad: { id: DATA_ID, sheet: 'DATA', range: 'A3:AC1500' },
   datalist: { id: DATA_ID, sheet: 'Datalist_Pusmanpro' },
   adkon: { id: DATA_ID, sheet: 'Adkon', range: 'A3:BZ1500' },
   rekap: { id: DATA_ID, sheet: 'Rekap Jumlah Pengawas' },
