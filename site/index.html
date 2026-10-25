@@ -84,11 +84,12 @@
   </div>
 </div>
 
-<script src="js/sidebar.js?v=__BUILD__"></script>
-<script src="js/config.js?v=__BUILD__"></script>
-<script src="js/sheets.js?v=__BUILD__"></script>
-<script src="js/data.js?v=__BUILD__"></script>
-<script src="js/ui.js?v=__BUILD__"></script>
-<script src="js/dashboard.js?v=__BUILD__"></script>
+<script>
+// Muat skrip dengan penanda waktu agar menu/halaman selalu versi terbaru (tidak tertahan cache browser).
+(function () {
+  var v = Date.now();
+  ['sidebar', 'config', 'sheets', 'data', 'ui', 'dashboard'].forEach(function (n) { document.write('<script src="js/' + n + '.js?t=' + v + '"><\/script>'); });
+})();
+</script>
 </body>
 </html>

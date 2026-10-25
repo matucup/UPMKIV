@@ -763,3 +763,10 @@ button:focus-visible, [tabindex]:focus-visible, input:focus-visible {
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip { background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px; font-size: 12px; }
 .chip b { margin-left: 4px; color: var(--red); }
+
+/* Halaman dummy "Under Construction" */
+.uc-card { max-width: 820px; margin: 24px auto; padding: 28px 28px 32px; text-align: center; }
+.uc-img { width: 100%; height: auto; border-radius: 10px; display: block; margin: 0 0 24px; }
+.uc-title { margin: 0 0 8px; font-size: 26px; font-weight: 800; color: var(--navy); }
+.uc-sub { margin: 0 0 20px; color: var(--text-muted); font-size: 14px; }
+.uc-card .btn { display: inline-block; text-decoration: none; }
