@@ -1,5 +1,5 @@
 const QUICK_LINKS = [
-  { title: 'SK PST', desc: 'Surat keputusan penetapan Project Site Team', href: 'sk-pst.html' },
+  { title: 'SK PSO', desc: 'Surat keputusan penetapan Project Site Office', href: 'sk-pso.html' },
   { title: 'Executive Summary', desc: 'Ringkasan eksekutif kinerja unit', href: 'executive-summary.html' },
   { title: 'Laporan', desc: 'Kumpulan laporan berkala', href: 'laporan.html' },
   { title: 'Evidence KPI', desc: 'Bukti pendukung pencapaian KPI', href: 'evidence-kpi.html' },

@@ -4,7 +4,7 @@ const SIDEBAR_BUILD = '__BUILD__';
 const NAV_ITEMS = [
   { href: 'index.html', label: 'Beranda' },
   { href: 'monitoring-progress.html', label: 'Monitoring Progress' },
-  { href: 'sk-pst.html', label: 'SK PST' },
+  { href: 'sk-pso.html', label: 'SK PSO' },
   { href: 'executive-summary.html', label: 'Executive Summary' },
   { href: 'laporan.html', label: 'Laporan' },
   { href: 'evidence-kpi.html', label: 'Evidence KPI' },

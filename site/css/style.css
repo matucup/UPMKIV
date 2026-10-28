@@ -170,7 +170,6 @@ a:hover {
   font-size: 14px;
   color: var(--text-muted);
   margin: 0;
-  max-width: 720px;
 }
 
 .stats-grid {
@@ -383,11 +382,20 @@ a:hover {
 }
 
 .page-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 24px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 24px;
+  align-items: center;
 }
+
+/* Judul + tombol muat-ulang satu baris; keterangan di bawahnya selebar penuh. */
+.page-header > div:first-child { display: contents; }
+.page-header h1 { grid-column: 1; grid-row: 1; }
+.page-header p { grid-column: 1 / -1; grid-row: 2; margin-top: 4px; }
+.page-header .refresh-box { grid-column: 2; grid-row: 1; flex-direction: column-reverse; align-items: flex-end; gap: 6px; max-width: 520px; }
+.page-header .refresh-box .updated { white-space: normal; text-align: right; }
+
+.refresh-box { flex: 0 0 auto; }
 
 .refresh-box {
   display: flex;
@@ -640,7 +648,8 @@ button:focus-visible, [tabindex]:focus-visible, input:focus-visible {
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
   .panels-grid.even, .panels-grid { grid-template-columns: 1fr; }
   .quicklinks-grid { grid-template-columns: 1fr 1fr; }
-  .page-header { flex-direction: column; }
+  .page-header { grid-template-columns: minmax(0, 1fr); row-gap: 8px; }
+  .page-header .refresh-box { grid-column: 1; grid-row: 3; white-space: normal; flex-wrap: wrap; }
   .app { flex-direction: column; }
   .sidebar { width: 100%; min-width: 0; height: auto; position: static; }
   .record { grid-template-columns: 1fr; }

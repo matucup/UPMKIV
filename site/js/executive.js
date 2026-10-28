@@ -1,5 +1,5 @@
 const JOBS = {
-  rekap: [normalizeRekapPengawas, { rows: [], total: null }],
+  personil: [normalizePersonil, []],
   pa: [normalizePA, []],
   adkon: [normalizeAdkon, []],
   pengadaan: [normalizePengadaan, []],
@@ -23,7 +23,7 @@ function periodLabel() {
 }
 
 function renderExecKpis() {
-  const { datalist: d, rekap, mm, tad } = S;
+  const { datalist: d, personil, mm, tad } = S;
   const win = mmWindow(mm);
   const wm = mm.months.slice(win.start, win.end);
   const mmTotal = mm.rows.reduce((a, r) => a + r.vals.slice(win.start, win.end).reduce((x, y) => x + y, 0), 0);
@@ -31,7 +31,7 @@ function renderExecKpis() {
   const cards = [
     { label: 'Kontrak dimonitor', value: d.length, sub: `${d.filter((p) => p.status === 'Selesai').length} selesai · ${d.filter((p) => !['Selesai', 'Belum mulai'].includes(p.status)).length} konstruksi aktif`, open: () => openList(pkgList('Semua kontrak', d)) },
     { label: 'Merah / Kuning', value: `${d.filter((p) => p.status === 'Merah').length} / ${d.filter((p) => p.status === 'Kuning').length}`, sub: 'paket menyimpang dari plan', open: () => openList(pkgList('Kontrak Merah dan Kuning', d.filter((p) => ['Merah', 'Kuning'].includes(p.status)).sort((a, b) => a.dev - b.dev))) },
-    { label: 'Pengawas lapangan', value: rekap.total ? rekap.total.total : '-', sub: rekap.total ? `${rekap.total.sc} SC · ${rekap.total.pengawas} pengawas · ${rekap.total.tad} TAD` : 'rekap belum terbaca', open: () => $('sdm').scrollIntoView({ behavior: 'smooth' }) },
+    { label: 'Personil lapangan', value: personil.length || '-', sub: personil.length ? `${new Set(personil.map((x) => norm(x.pso))).size} PSO / unit kerja` : 'tab Personil belum terbaca', open: () => $('sdm').scrollIntoView({ behavior: 'smooth' }) },
     { label: 'Man-month 6 bulan', value: fmt(mmTotal), sub: wm.length ? `${wm[0].label} – ${wm[wm.length - 1].label}` : 'belum ada data', open: () => { window.location.href = 'index.html'; } },
     { label: 'Permintaan TAD', value: tad.length, sub: `${late} terlambat mobilisasi`, open: () => { window.location.href = 'index.html'; } },
   ];
@@ -40,10 +40,32 @@ function renderExecKpis() {
 }
 
 function renderSdm() {
-  const { rows, total } = S.rekap;
-  if (!rows.length) { $('sdm').innerHTML = '<p class="empty">Rekap jumlah pengawas belum terbaca.</p>'; return; }
-  const tr = (r, tag) => `<tr><td>${esc(r.pso)}</td><td>${esc(r.pc)}</td><td class="num">${r.sc}</td><td class="num">${r.pengawas}</td><td class="num">${r.tad}</td><td class="num">${r.total}</td><td class="num">${r.sebelum.selesai}</td><td class="num">${r.sebelum.ongoing}</td><td class="num">${r.sebelum.total}</td><td class="num">${r.setelah.total}</td><td class="num">${r.rasio === null ? '-' : r.rasio.toLocaleString('id-ID', { maximumFractionDigits: 2 })}</td></tr>`;
-  $('sdm').innerHTML = `<div class="table-scroll"><table class="report-table"><thead><tr><th>PSO</th><th>Project coordinator</th><th class="num">SC</th><th class="num">Pengawas</th><th class="num">TAD</th><th class="num">Total</th><th class="num">Selesai/SLO</th><th class="num">On going</th><th class="num">Proyek (kini)</th><th class="num">Proyek (setelah)</th><th class="num">Rasio</th></tr></thead><tbody>${rows.map((r) => tr(r)).join('')}</tbody>${total ? `<tfoot>${tr({ ...total, pso: 'Total', pc: '', rasio: null })}</tfoot>` : ''}</table></div>`;
+  const { personil, mm } = S;
+  if (!personil.length) { $('sdm').innerHTML = '<p class="empty">Data personil (tab Personil) belum terbaca.</p>'; return; }
+  const win = mm.months.length ? mmWindow(mm) : null;
+  const nMonth = win ? win.end - win.start : 0;
+  const f1 = (n) => n.toLocaleString('id-ID', { maximumFractionDigits: 1 });
+  const map = new Map();
+  const slot = (name) => { const k = norm(name); if (!map.has(k)) map.set(k, { pso: name, n: 0, now: 0, sum: 0 }); return map.get(k); };
+  personil.forEach((p) => { slot(p.pso).n += 1; });
+  if (win) {
+    mm.rows.forEach((r) => {
+      const x = slot(r.pso);
+      x.sum += r.vals.slice(win.start, win.end).reduce((a, b) => a + b, 0);
+      if (win.cur >= 0) x.now += r.vals[win.cur] || 0;
+    });
+  }
+  const rows = [...map.values()].sort((a, b) => b.n - a.n || b.sum - a.sum);
+  const tot = rows.reduce((a, r) => ({ n: a.n + r.n, now: a.now + r.now, sum: a.sum + r.sum }), { n: 0, now: 0, sum: 0 });
+  const gap = (r) => (nMonth ? r.sum / nMonth - r.n : null);
+  const gapCell = (g) => (g === null ? '-' : `<span class="badge ${g > 0 ? 'badge-warning' : 'badge-muted'}">${fmtDev(Math.round(g * 10) / 10)}</span>`);
+  const tr = (r, bold) => `<tr><td>${esc(r.pso)}</td><td class="num">${r.n}</td><td class="num">${win && win.cur >= 0 ? f1(r.now) : '-'}</td><td class="num">${nMonth ? f1(r.sum) : '-'}</td><td class="num">${nMonth ? f1(r.sum / nMonth) : '-'}</td><td class="num">${gapCell(gap(r))}</td></tr>`;
+  const label = nMonth ? `${mm.months[win.start].label} – ${mm.months[win.end - 1].label}` : '';
+  const byTugas = {};
+  personil.forEach((p) => { const k = p.penugasan || '(belum diisi)'; byTugas[k] = (byTugas[k] || 0) + 1; });
+  const top = Object.entries(byTugas).sort((a, b) => b[1] - a[1]).slice(0, 4);
+  const mini = top.map(([k, v]) => `<div class="mini"><div class="stat-label">${esc(k)}</div><div class="stat-value">${v}</div><div class="stat-sub">${f1((v / personil.length) * 100)}% dari personil</div></div>`).join('');
+  $('sdm').innerHTML = `<div class="mini-row four">${mini}</div><div class="table-scroll"><table class="report-table"><thead><tr><th>PSO / unit</th><th class="num">Personil</th><th class="num">MM bulan ini</th><th class="num">MM ${nMonth} bulan</th><th class="num">Rata-rata MM/bulan</th><th class="num">Kebutuhan &minus; personil</th></tr></thead><tbody>${rows.map((r) => tr(r)).join('')}</tbody><tfoot><tr><td>Total</td><td class="num">${tot.n}</td><td class="num">${win && win.cur >= 0 ? f1(tot.now) : '-'}</td><td class="num">${nMonth ? f1(tot.sum) : '-'}</td><td class="num">${nMonth ? f1(tot.sum / nMonth) : '-'}</td><td class="num">${gapCell(gap(tot))}</td></tr></tfoot></table></div><p class="panel-sub" style="margin-top:10px">Personil dari tab Personil (sheet Distribusi Man Month). Man-month dari tab LIVE_MM${label ? `, periode ${esc(label)}` : ''}. Kebutuhan &minus; personil = rata-rata man-month per bulan dikurangi jumlah personil; angka positif berarti kebutuhan lebih besar dari personil yang tercatat. Man-month mencakup TAD, jadi selisih ini indikatif.</p>`;
 }
 
 function renderPa() {

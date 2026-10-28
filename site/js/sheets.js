@@ -5,7 +5,6 @@ const SOURCES = {
   tad: { id: DATA_ID, sheet: 'DATA', range: 'A3:AC1500' },
   datalist: { id: DATA_ID, sheet: 'Datalist_Pusmanpro' },
   adkon: { id: DATA_ID, sheet: 'Adkon', range: 'A3:BZ1500' },
-  rekap: { id: DATA_ID, sheet: 'Rekap Jumlah Pengawas' },
   pa: { id: DATA_ID, sheet: 'Monitoring PA' },
   pengadaan: { id: DATA_ID, sheet: 'Monitoring Pengadaan' },
 };
