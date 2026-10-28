@@ -390,3 +390,17 @@ function buildPenugasan(adkon, kontrak) {
     };
   });
 }
+
+// Pagu RBT (rencana) vs realisasi per PSO. rows: penugasan/adkon yang punya field pso, rbt, realisasi.
+function rbtPerPso(rows) {
+  const m = new Map();
+  for (const r of rows) {
+    if (!r.rbt) continue;
+    const name = titleCase(r.pso) || 'Lainnya';
+    const k = norm(name);
+    if (!m.has(k)) m.set(k, { pso: name, rbt: 0, real: 0, n: 0 });
+    const e = m.get(k);
+    e.rbt += r.rbt; e.real += r.realisasi || 0; e.n += 1;
+  }
+  return m;
+}

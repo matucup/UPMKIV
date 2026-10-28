@@ -47,28 +47,74 @@ function closeModal() {
   if (lastFocus && lastFocus.focus) lastFocus.focus();
 }
 
+/* Pengurutan daftar detail: default menaik (A-Z / kecil ke besar / tanggal terlama); klik judul kolom untuk mengubah arah. */
+
+function sortKey(v) {
+  const s = String(v ?? '').replace(/\u2212/g, '-').trim();
+  if (s === '' || s === '-') return { t: 0 };
+  if (/^[+-]?\d[\d.,]*\s*%?$/.test(s)) {
+    const n = parseNum(s.replace('%', '').replace(/^\+/, ''));
+    if (n !== null) return { t: 1, n };
+  }
+  if (/^\d{1,2}[\s-][A-Za-z]{3,}\.?[\s-]\d{2,4}$/.test(s)) {
+    const d = parseDate(s);
+    if (d) return { t: 2, n: d.getTime() };
+  }
+  return { t: 3, s };
+}
+
+const collator = new Intl.Collator('id', { numeric: true, sensitivity: 'base' });
+
+function cmpKeys(a, b) {
+  if (a.t === 0 || b.t === 0) return a.t === b.t ? 0 : a.t === 0 ? 1 : -1; // kosong selalu di bawah
+  if (a.t === b.t && a.t !== 3) return a.n - b.n;
+  return collator.compare(a.s ?? String(a.n), b.s ?? String(b.n));
+}
+
 function openList(cfg) {
   currentList = cfg;
   $('modal-title').textContent = cfg.title;
   $('modal-sub').textContent = cfg.sub || '';
   $('modal-tools').innerHTML = `<input type="search" id="modal-search" class="search" placeholder="Cari di daftar ini…" aria-label="Cari di daftar ini"><span id="modal-count" class="count"></span>`;
   const searchable = cfg.rows.map((r) => cfg.cols.map((c) => c.val(r)).join(' ').toLowerCase());
+  const keys = cfg.rows.map((r) => cfg.cols.map((c) => sortKey(c.val(r))));
+  // Urutan asli dipertahankan hanya bila pemanggil menyebutnya ("Urut dari ..."); selain itu menaik menurut kolom kiri ke kanan.
+  if (!cfg._sort) cfg._sort = { col: cfg.sub && /urut/i.test(cfg.sub) ? null : -1, dir: 1 };
+  const sortBy = cfg._sort;
+  const compare = (i, j) => {
+    if (sortBy.col === null) return 0;
+    if (sortBy.col >= 0) return sortBy.dir * cmpKeys(keys[i][sortBy.col], keys[j][sortBy.col]) || i - j;
+    for (let c = 0; c < cfg.cols.length; c++) { const d = cmpKeys(keys[i][c], keys[j][c]); if (d) return d; }
+    return i - j;
+  };
   const draw = () => {
     const q = $('modal-search').value.trim().toLowerCase();
     const idx = [];
     searchable.forEach((t, i) => { if (!q || t.includes(q)) idx.push(i); });
+    idx.sort(compare);
     const shown = idx.slice(0, 500);
     $('modal-count').textContent = `${idx.length} dari ${cfg.rows.length}${idx.length > 500 ? ' (500 teratas)' : ''}`;
     $('modal-body').innerHTML = shown.length
-      ? `<div class="table-wrap"><table class="table"><thead><tr>${cfg.cols.map((c) => `<th${c.num ? ' class="num"' : ''}>${esc(c.label)}</th>`).join('')}</tr></thead><tbody>${shown.map((i) => `<tr${cfg.record || cfg.card ? ` class="clickable" tabindex="0" data-i="${i}"` : ''}>${cfg.cols.map((c) => `<td${c.num ? ' class="num"' : ''}>${c.html ? c.html(cfg.rows[i]) : esc(c.val(cfg.rows[i]))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`
+      ? `<div class="table-wrap"><table class="table"><thead><tr>${cfg.cols.map((c, ci) => { const on = sortBy.col === ci || (sortBy.col === -1 && ci === 0); return `<th class="sortable${c.num ? ' num' : ''}" data-col="${ci}" tabindex="0" role="columnheader" aria-sort="${on ? (sortBy.dir > 0 ? 'ascending' : 'descending') : 'none'}" title="Klik untuk mengurutkan">${esc(c.label)}<span class="sort-ind">${on ? (sortBy.dir > 0 ? ' ▲' : ' ▼') : ''}</span></th>`; }).join('')}</tr></thead><tbody>${shown.map((i) => `<tr${cfg.record || cfg.card ? ` class="clickable" tabindex="0" data-i="${i}"` : ''}>${cfg.cols.map((c) => `<td${c.num ? ' class="num"' : ''}>${c.html ? c.html(cfg.rows[i]) : esc(c.val(cfg.rows[i]))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`
       : '<p class="empty">Tidak ada data yang cocok.</p>';
   };
   $('modal-search').addEventListener('input', draw);
+  const toggleSort = (th) => {
+    const col = +th.dataset.col;
+    if (sortBy.col === col) sortBy.dir = -sortBy.dir; else { sortBy.col = col; sortBy.dir = 1; }
+    draw();
+    const again = $('modal-body').querySelector(`th[data-col="${col}"]`);
+    if (again) again.focus();
+  };
   $('modal-body').onclick = (e) => {
+    const th = e.target.closest('th[data-col]');
+    if (th) { toggleSort(th); return; }
     const tr = e.target.closest('tr[data-i]');
     if (tr && (cfg.record || cfg.card)) (cfg.card ? cfg.card(cfg.rows[+tr.dataset.i], cfg) : openRecord(cfg, cfg.rows[+tr.dataset.i]));
   };
   $('modal-body').onkeydown = (e) => {
+    const th = e.target.closest('th[data-col]');
+    if (th && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggleSort(th); return; }
     const tr = e.target.closest('tr[data-i]');
     if (tr && (cfg.record || cfg.card) && e.key === 'Enter') (cfg.card ? cfg.card(cfg.rows[+tr.dataset.i], cfg) : openRecord(cfg, cfg.rows[+tr.dataset.i]));
   };

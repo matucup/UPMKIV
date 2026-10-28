@@ -46,7 +46,7 @@ function renderSdm() {
   const nMonth = win ? win.end - win.start : 0;
   const f1 = (n) => n.toLocaleString('id-ID', { maximumFractionDigits: 1 });
   const map = new Map();
-  const slot = (name) => { const k = norm(name); if (!map.has(k)) map.set(k, { pso: name, n: 0, now: 0, sum: 0 }); return map.get(k); };
+  const slot = (name) => { const k = norm(name); if (!map.has(k)) map.set(k, { pso: name, n: 0, now: 0, sum: 0, rbt: 0, real: 0, hasRbt: false }); return map.get(k); };
   personil.forEach((p) => { slot(p.pso).n += 1; });
   if (win) {
     mm.rows.forEach((r) => {
@@ -55,17 +55,19 @@ function renderSdm() {
       if (win.cur >= 0) x.now += r.vals[win.cur] || 0;
     });
   }
-  const rows = [...map.values()].sort((a, b) => b.n - a.n || b.sum - a.sum);
-  const tot = rows.reduce((a, r) => ({ n: a.n + r.n, now: a.now + r.now, sum: a.sum + r.sum }), { n: 0, now: 0, sum: 0 });
+  rbtPerPso(S.pen).forEach((v) => { const x = slot(v.pso); x.rbt += v.rbt; x.real += v.real; x.hasRbt = true; });
+  const rows = [...map.values()].sort((a, b) => b.n - a.n || b.sum - a.sum || String(a.pso).localeCompare(String(b.pso), 'id'));
+  const tot = rows.reduce((a, r) => ({ n: a.n + r.n, now: a.now + r.now, sum: a.sum + r.sum, rbt: a.rbt + r.rbt, real: a.real + r.real, hasRbt: a.hasRbt || r.hasRbt }), { n: 0, now: 0, sum: 0, rbt: 0, real: 0, hasRbt: false });
   const gap = (r) => (nMonth ? r.sum / nMonth - r.n : null);
   const gapCell = (g) => (g === null ? '-' : `<span class="badge ${g > 0 ? 'badge-warning' : 'badge-muted'}">${fmtDev(Math.round(g * 10) / 10)}</span>`);
-  const tr = (r, bold) => `<tr><td>${esc(r.pso)}</td><td class="num">${r.n}</td><td class="num">${win && win.cur >= 0 ? f1(r.now) : '-'}</td><td class="num">${nMonth ? f1(r.sum) : '-'}</td><td class="num">${nMonth ? f1(r.sum / nMonth) : '-'}</td><td class="num">${gapCell(gap(r))}</td></tr>`;
+  const rbtCells = (r) => (r.hasRbt ? `<td class="num">${fmtRp(r.rbt)}</td><td class="num">${fmtRp(r.real)}</td><td class="num">${r.rbt ? fmtPct((r.real / r.rbt) * 100) : '-'}</td>` : '<td class="num">-</td><td class="num">-</td><td class="num">-</td>');
+  const tr = (r) => `<tr><td>${esc(r.pso)}</td><td class="num">${r.n}</td><td class="num">${win && win.cur >= 0 ? f1(r.now) : '-'}</td><td class="num">${nMonth ? f1(r.sum) : '-'}</td><td class="num">${nMonth ? f1(r.sum / nMonth) : '-'}</td><td class="num">${gapCell(gap(r))}</td>${rbtCells(r)}</tr>`;
   const label = nMonth ? `${mm.months[win.start].label} – ${mm.months[win.end - 1].label}` : '';
   const byTugas = {};
   personil.forEach((p) => { const k = p.penugasan || '(belum diisi)'; byTugas[k] = (byTugas[k] || 0) + 1; });
   const top = Object.entries(byTugas).sort((a, b) => b[1] - a[1]).slice(0, 4);
   const mini = top.map(([k, v]) => `<div class="mini"><div class="stat-label">${esc(k)}</div><div class="stat-value">${v}</div><div class="stat-sub">${f1((v / personil.length) * 100)}% dari personil</div></div>`).join('');
-  $('sdm').innerHTML = `<div class="mini-row four">${mini}</div><div class="table-scroll"><table class="report-table"><thead><tr><th>PSO / unit</th><th class="num">Personil</th><th class="num">MM bulan ini</th><th class="num">MM ${nMonth} bulan</th><th class="num">Rata-rata MM/bulan</th><th class="num">Kebutuhan &minus; personil</th></tr></thead><tbody>${rows.map((r) => tr(r)).join('')}</tbody><tfoot><tr><td>Total</td><td class="num">${tot.n}</td><td class="num">${win && win.cur >= 0 ? f1(tot.now) : '-'}</td><td class="num">${nMonth ? f1(tot.sum) : '-'}</td><td class="num">${nMonth ? f1(tot.sum / nMonth) : '-'}</td><td class="num">${gapCell(gap(tot))}</td></tr></tfoot></table></div><p class="panel-sub" style="margin-top:10px">Personil dari tab Personil (sheet Distribusi Man Month). Man-month dari tab LIVE_MM${label ? `, periode ${esc(label)}` : ''}. Kebutuhan &minus; personil = rata-rata man-month per bulan dikurangi jumlah personil; angka positif berarti kebutuhan lebih besar dari personil yang tercatat. Man-month mencakup TAD, jadi selisih ini indikatif.</p>`;
+  $('sdm').innerHTML = `<div class="mini-row four">${mini}</div><div class="table-scroll"><table class="report-table"><thead><tr><th>PSO / unit</th><th class="num">Personil</th><th class="num">MM bulan ini</th><th class="num">MM ${nMonth} bulan</th><th class="num">Rata-rata MM/bulan</th><th class="num">Kebutuhan &minus; personil</th><th class="num">Pagu RBT</th><th class="num">Realisasi RBT</th><th class="num">Serapan</th></tr></thead><tbody>${rows.map((r) => tr(r)).join('')}</tbody><tfoot><tr><td>Total</td><td class="num">${tot.n}</td><td class="num">${win && win.cur >= 0 ? f1(tot.now) : '-'}</td><td class="num">${nMonth ? f1(tot.sum) : '-'}</td><td class="num">${nMonth ? f1(tot.sum / nMonth) : '-'}</td><td class="num">${gapCell(gap(tot))}</td>${rbtCells(tot)}</tr></tfoot></table></div><p class="panel-sub" style="margin-top:10px">Personil dari tab Personil (sheet Distribusi Man Month). Man-month dari tab LIVE_MM${label ? `, periode ${esc(label)}` : ''}. Kebutuhan &minus; personil = rata-rata man-month per bulan dikurangi jumlah personil; angka positif berarti kebutuhan lebih besar dari personil yang tercatat. Man-month mencakup TAD, jadi selisih ini indikatif. Pagu RBT (rencana biaya tunai) dan realisasinya dijumlahkan dari seluruh penugasan UPMK IV pada tab Adkon, dikelompokkan menurut PSO; penugasan yang dipegang beberapa PSO (mis. &ldquo;Aceh &amp; Sumatera Utara&rdquo;) tampil sebagai baris tersendiri.</p>`;
 }
 
 function renderPa() {

@@ -15,7 +15,7 @@ const QUICK_LINKS = [
 
 
 async function loadAll() {
-  const jobs = { proyek: normalizeProyek, personil: normalizePersonil, mm: normalizeMM, tad: normalizeTad };
+  const jobs = { proyek: normalizeProyek, personil: normalizePersonil, mm: normalizeMM, tad: normalizeTad, adkon: normalizeAdkon };
   const data = {};
   const failed = [];
   await Promise.all(Object.entries(jobs).map(async ([k, fn]) => {
@@ -130,10 +130,31 @@ function renderChart() {
 }
 
 
+/* Personil per PSO, dengan pagu RBT (rencana) dibandingkan realisasi RBT di bawah tiap batang. */
+function renderPersonilRbt() {
+  const { personil, adkon } = S;
+  const el = $('pso-personil');
+  const rbt = rbtPerPso(adkon);
+  const rows = countBy(personil, (p) => p.pso);
+  // PSO yang punya RBT tetapi belum punya personil di tab Personil tetap ditampilkan.
+  rbt.forEach((v, k) => { if (!rows.some(([n]) => norm(n) === k)) rows.push([v.pso, 0]); });
+  rows.sort((a, b) => b[1] - a[1] || String(a[0]).localeCompare(String(b[0]), 'id'));
+  if (!rows.length) { el.innerHTML = '<p class="empty">Belum ada data.</p>'; return; }
+  const max = Math.max(...rows.map((r) => r[1]), 1);
+  el.innerHTML = rows.map(([k, v], i) => {
+    const b = rbt.get(norm(k));
+    const pct = b && b.rbt ? (b.real / b.rbt) * 100 : null;
+    const line = b ? `RBT ${fmtRp(b.rbt)} &middot; realisasi ${fmtRp(b.real)} (${fmtPct(pct)})` : 'RBT belum tercatat di tab Adkon';
+    const meter = b ? `<span class="bar-track thin" title="Realisasi RBT dibanding pagu"><span class="bar-fill ${pct > 100 ? 'rbt-over' : 'rbt-fill'}" style="width:${Math.min(100, pct)}%"></span></span>` : '';
+    return `<button type="button" class="bar-row rbt" data-i="${i}"><span class="bar-label">${esc(k)}</span><span class="bar-val">${v}</span><span class="bar-track"><span class="bar-fill" style="width:${(v / max) * 100}%"></span></span><span class="rbt-line">${line}</span>${meter}</button>`;
+  }).join('');
+  el.onclick = (e) => { const b = e.target.closest('[data-i]'); if (b) { const k = rows[+b.dataset.i][0]; openList(personilList(`Personil ${k}`, personil.filter((p) => p.pso === k))); } };
+}
+
 function renderPanels() {
   const { proyek, personil, tad } = S;
   barList($('pso-proyek'), countBy(proyek, (p) => p.pso), (k) => openList(projectList(`Proyek PSO ${k}`, proyek.filter((p) => p.pso === k))));
-  barList($('pso-personil'), countBy(personil, (p) => p.pso), (k) => openList(personilList(`Personil ${k}`, personil.filter((p) => p.pso === k))));
+  renderPersonilRbt();
 
   const soon = proyek.filter((p) => p.status === 'Segera berakhir').sort((a, b) => a.daysLeft - b.daysLeft);
   const ended = proyek.filter((p) => p.status === 'Berakhir').sort((a, b) => b.daysLeft - a.daysLeft);
