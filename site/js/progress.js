@@ -58,6 +58,8 @@ const penCols = [
   { label: 'PSO', val: (r) => r.pso },
   { label: 'Penugasan', val: (r) => r.nama, html: (r) => `${esc(r.nama)}<div class="item-sub">${esc(r.kode)}${r.noSurat ? ` · ${esc(r.noSurat)}` : ''}</div>` },
   { label: 'Kontrak', val: (r) => String(r.kontrak.length), num: true },
+  { label: 'Pagu RBT', val: (r) => (r.rbt ? fmtRp(r.rbt) : '-'), num: true, sort: (r) => r.rbt },
+  { label: 'Realisasi RBT', val: (r) => (r.realisasi === null || r.realisasi === undefined ? '-' : fmtRp(r.realisasi)), num: true, sort: (r) => r.realisasi },
   { label: 'Progres', val: (r) => fmtPct(r.aktual), num: true },
   { label: 'Serapan biaya', val: (r) => fmtPct(r.serapan), num: true },
   { label: 'Selisih', val: (r) => fmtDev(r.sel), num: true },
@@ -88,7 +90,40 @@ function openPenugasanCard(e, back) {
   $('modal-body').onclick = (ev) => { const b = ev.target.closest('[data-i]'); if (b) openPackageCard(e.kontrak[+b.dataset.i], again); };
 }
 
+/* Realisasi RBT disandingkan dengan progres fisik: akumulasi per PSO.
+   Progres fisik PSO = rata-rata progres penugasan, dibobot pagu RBT; selisih dihitung pada penugasan yang progresnya terpantau saja. */
+function psoCostRows(pens) {
+  const m = new Map();
+  for (const p of pens) {
+    if (!p.rbt) continue;
+    const k = norm(p.pso);
+    if (!m.has(k)) m.set(k, { pso: p.pso, n: 0, nPrg: 0, rbt: 0, real: 0, w: 0, wProg: 0, rbtCmp: 0, realCmp: 0 });
+    const g = m.get(k);
+    g.n += 1; g.rbt += p.rbt; g.real += p.realisasi || 0;
+    if (p.aktual !== null) { g.nPrg += 1; g.w += p.rbt; g.wProg += p.rbt * p.aktual; g.rbtCmp += p.rbt; g.realCmp += p.realisasi || 0; }
+  }
+  return [...m.values()].sort((a, b) => String(a.pso).localeCompare(String(b.pso), 'id'));
+}
+
+function psoCostCells(g) {
+  const prog = g.w ? g.wProg / g.w : null;
+  const serCmp = g.rbtCmp ? (g.realCmp / g.rbtCmp) * 100 : null;
+  const sel = prog !== null && serCmp !== null ? serCmp - prog : null;
+  return `<td class="num">${g.nPrg}/${g.n}</td><td class="num">${fmtRp(g.rbt)}</td><td class="num">${fmtRp(g.real)}</td><td class="num">${fmtPct(g.rbt ? (g.real / g.rbt) * 100 : null)}</td><td class="num">${fmtPct(prog)}</td><td class="num">${sel === null ? '-' : `<span class="badge ${Math.abs(sel) > 25 ? 'badge-warning' : 'badge-muted'}">${fmtDev(sel)}</span>`}</td>`;
+}
+
+function mountPsoCost(el, pens) {
+  const rows = psoCostRows(pens);
+  if (!rows.length) { el.innerHTML = '<p class="empty">Belum ada data RBT per PSO.</p>'; el.onclick = null; return; }
+  const tot = rows.reduce((a, g) => ({ n: a.n + g.n, nPrg: a.nPrg + g.nPrg, rbt: a.rbt + g.rbt, real: a.real + g.real, w: a.w + g.w, wProg: a.wProg + g.wProg, rbtCmp: a.rbtCmp + g.rbtCmp, realCmp: a.realCmp + g.realCmp }), { n: 0, nPrg: 0, rbt: 0, real: 0, w: 0, wProg: 0, rbtCmp: 0, realCmp: 0 });
+  el.innerHTML = `<div class="table-scroll"><table class="report-table"><thead><tr><th>PSO</th><th class="num" title="Penugasan yang progres fisiknya terpantau / seluruh penugasan ber-RBT">Terpantau</th><th class="num">Pagu RBT</th><th class="num">Realisasi RBT</th><th class="num">Serapan biaya</th><th class="num">Progres fisik</th><th class="num" title="Serapan biaya dikurangi progres fisik, hanya pada penugasan yang progresnya terpantau">Selisih (poin)</th></tr></thead><tbody>${rows.map((g, i) => `<tr class="clickable" tabindex="0" data-pso="${i}"><td>${esc(g.pso)}</td>${psoCostCells(g)}</tr>`).join('')}</tbody><tfoot><tr><td>Total</td>${psoCostCells(tot)}</tr></tfoot></table></div><p class="panel-sub" style="margin-top:8px">Progres fisik per PSO adalah rata-rata progres penugasan yang dibobot pagu RBT-nya. Selisih = serapan biaya &minus; progres fisik, dihitung hanya pada penugasan yang progresnya terpantau (kolom Terpantau). Klik baris untuk melihat penugasannya.</p>`;
+  const open = (i) => { const g = rows[i]; openList(penList(`Penugasan ${g.pso}`, pens.filter((p) => p.rbt && norm(p.pso) === norm(g.pso)))); };
+  el.onclick = (ev) => { const tr = ev.target.closest('tr[data-pso]'); if (tr) open(+tr.dataset.pso); };
+  el.onkeydown = (ev) => { const tr = ev.target.closest('tr[data-pso]'); if (tr && ev.key === 'Enter') open(+tr.dataset.pso); };
+}
+
 function renderPenugasan() {
+  mountPsoCost($('pen-psocost'), S.pen);
   const rows = [...S.pen].sort((a, b) => (a.akhir ? a.akhir.getTime() : 9e15) - (b.akhir ? b.akhir.getTime() : 9e15));
   const rbt = rows.reduce((s, r) => s + (r.rbt || 0), 0), real = rows.reduce((s, r) => s + (r.realisasi || 0), 0);
   $('pen-note').textContent = `${rows.length} penugasan · RBT ${fmtRp(rbt)} · realisasi ${fmtRp(real)} (${fmtPct(rbt ? (real / rbt) * 100 : null)}) · urut dari masa penugasan terdekat`;

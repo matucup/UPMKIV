@@ -40,6 +40,40 @@ const titleCase = (s) => (s && s === s.toUpperCase() ? s.toLowerCase().replace(/
 const norm = (s) => String(s ?? '').toLowerCase().replace(/\s+/g, ' ').trim();
 const clean = (s) => String(s ?? '').replace(/\s+/g, ' ').trim();
 
+/* Standarisasi nama PSO: satu nama resmi per PSO di seluruh sheet.
+   - awalan "PSO " dibuang; nama gabungan ("Aceh, Sumut", "A & B", "A dan PSO B") diambil bagian pertamanya;
+   - alias (mis. "Kepulauan Riau" -> Riau) dipetakan lewat PSO_ALIAS di config.js;
+   - setiap perubahan isi atau nama yang tidak dikenal dicatat di PSO_LOG supaya terlihat di halaman. */
+const PSO_LOG = new Map();
+
+function canonPso(raw, src) {
+  const orig = clean(raw);
+  if (!orig) return '';
+  const noPrefix = clean(orig.replace(/^PSO\s+/i, ''));
+  const first = clean(noPrefix.split(/\s*(?:,|&|\/|\s+dan\s+(?:PSO\s+)?)\s*/i)[0]);
+  const key = norm(first);
+  const official = PSO_RESMI.find((n) => norm(n) === key);
+  const canon = official || PSO_ALIAS[key] || titleCase(first);
+  const changed = norm(canon) !== norm(noPrefix);
+  const known = PSO_RESMI.includes(canon);
+  if (changed || !known) {
+    const k = `${src}\u0001${orig}`;
+    const e = PSO_LOG.get(k) || { src, orig, canon, n: 0, known };
+    e.n += 1;
+    PSO_LOG.set(k, e);
+  }
+  return canon;
+}
+
+function psoNotices() {
+  const fixed = [], unknown = [];
+  PSO_LOG.forEach((e) => (e.known ? fixed : unknown).push(e));
+  const msgs = [];
+  if (fixed.length) msgs.push(`Nama PSO disamakan otomatis: ${fixed.map((e) => `"${e.orig}" menjadi ${e.canon} (${e.src}, ${e.n} baris)`).join('; ')}. Sebaiknya diseragamkan juga di sheet sumbernya.`);
+  if (unknown.length) msgs.push(`PSO tidak dikenal: ${unknown.map((e) => `"${e.orig}" (${e.src}, ${e.n} baris)`).join('; ')}. Tambahkan alias di js/config.js (PSO_ALIAS) bila itu penulisan lain dari PSO yang ada.`);
+  return msgs;
+}
+
 function findHeader(grid, required) {
   const need = required.map(norm);
   for (let r = 0; r < Math.min(grid.length, 15); r++) {
@@ -66,7 +100,7 @@ function normalizeProyek(grid) {
     const epc = g('Proyek EPC');
     const kode = g('Kode Lokasi');
     if (!judul && !kode && !epc) continue;
-    const pso = titleCase(g('PSO')) || '-';
+    const pso = canonPso(g('PSO'), 'Daftar Proyek') || '-';
     const akhir = parseDate(g('Akhir Penugasan')) || parseDate(g('COD Amandemen')) || parseDate(g('COD Kontrak'));
     const daysLeft = akhir ? Math.ceil((akhir - today) / 864e5) : null;
     const status = daysLeft === null ? (g('PIC') ? 'Tanpa tanggal' : 'Belum ditugaskan') : daysLeft < 0 ? 'Berakhir' : daysLeft <= 90 ? 'Segera berakhir' : 'Berjalan';
@@ -96,7 +130,7 @@ function normalizePersonil(grid) {
     const proyek = cellAt(row, h, 'PROYEK');
     const g = (n) => cellAt(row, h, n);
     out.push({
-      nama, pso: titleCase(g('PSO')) || '-', penugasan: g('PENUGASAN'), kualifikasi: g('KUALIFIKASI'), proyek,
+      nama, pso: canonPso(g('PSO'), 'Personil') || '-', penugasan: g('PENUGASAN'), kualifikasi: g('KUALIFIKASI'), proyek,
       _f: [['Nama', nama], ['PSO', g('PSO')], ['Penugasan', g('PENUGASAN')], ['Kualifikasi', g('KUALIFIKASI')],
         ['Proyek', proyek], ['Tanggal Awal Bergabung', g('TANGGAL AWAL BERGABUNG')]],
     });
@@ -121,7 +155,7 @@ function normalizeMM(grid) {
     if (!pso || !proyek) continue;
     const vals = months.map((mo) => parseNum(row[mo.col]) || 0);
     rows.push({
-      pso: titleCase(pso), proyek, posisi: cellAt(row, h, 'Posisi'), keahlian: cellAt(row, h, 'Keahlian'),
+      pso: canonPso(pso, 'LIVE_MM'), proyek, posisi: cellAt(row, h, 'Posisi'), keahlian: cellAt(row, h, 'Keahlian'),
       kualifikasi: cellAt(row, h, 'Kualifikasi Dalam SLA') || cellAt(row, h, 'Kualifikasi Maks'), vals,
     });
   }
@@ -181,7 +215,7 @@ function makePackage(o) {
   const dev = aktual !== null && plan !== null ? aktual - plan : null;
   const status = progressStatus(aktual, plan);
   return {
-    id: o.id, kode: o.kode, no: o.no, pso: titleCase(o.pso), jenis: o.jenis, milestone: o.milestone, nama: o.nama,
+    id: o.id, kode: o.kode, no: o.no, pso: canonPso(o.pso, 'Proyek (template)') || 'Lainnya', jenis: o.jenis, milestone: o.milestone, nama: o.nama,
     kontraktor: o.kontraktor, direksi: o.direksi, pemberi: o.pemberi, noKontrak: o.noKontrak, aktual, plan, dev, status,
     periode, ageDays: periode ? -daysUntil(periode) : null, penugasanSd, cod, garansi: parseDate(o.garansi),
     nilai: parseNum(o.nilai), aktivitas: o.aktivitas, issues: o.issues, lingkup: o.lingkup, dokumen: o.dokumen || [],
@@ -207,7 +241,7 @@ function normalizeDatalist(grid) {
     const g = (n) => cellAt(row, h, n);
     if (!g('Nama Proyek')) continue;
     const pst = g('PST');
-    const pso = /^PSO /i.test(pst) ? pst.replace(/^PSO /i, '').replace(/ dan PSO /i, ' & ') : 'Lainnya';
+    const pso = /^PSO /i.test(pst) ? canonPso(pst, 'Datalist_Pusmanpro') : 'Lainnya';
     const issues = [];
     for (let i = 1; i <= 5; i++) {
       const kat = g('Kategori' + i);
@@ -341,9 +375,10 @@ function normalizeAdkon(grid) {
     const akhir = akhirCols.map((i) => parseDate(row[i])).find(Boolean) || null;
     out.push({
       kode: g('KODE LOKASI'), nama: g('NAMA PROYEK'), judul: g('Judul STg'), noSurat: g('NOSurat Penugasan'), amandemen: g('Amandemen Terakhir'),
-      status: g('STATUS'), jenis: g('JENIS'), subJenis: g('SUB SUB JENIS'), pso: /^PSO /i.test(pst) ? pst.replace(/^PSO /i, '').replace(/ dan PSO /i, ' & ') : lokasi || 'Lainnya',
+      status: g('STATUS'), jenis: g('JENIS'), subJenis: g('SUB SUB JENIS'), pso: /^PSO /i.test(pst) ? canonPso(pst, 'Adkon') : canonPso(lokasi, 'Adkon (kolom LOKASI)') || 'Lainnya',
       rbt, realisasi: real, bulanIni: parseNum(g('REALISASI RBT BULAN INI')), periode: parseDate(g('PERIODE')),
       mulai: parseDate(g('Mulai Penugasan')), akhir, sisaMM: parseNum(g('SISA MAN-MONTH')),
+      rencanaMM: parseNum(g('RENCANA MAN-MONTH (MM)')), realMM: parseNum(g('REALISASI MM')), mmBulanIni: parseNum(g('REALISASI MM BULAN INI')),
       serapan: rbt && real !== null ? (real / rbt) * 100 : null,
     });
   }
@@ -382,7 +417,8 @@ function buildPenugasan(adkon, kontrak) {
       nama: (a && a.nama) || first.nama || e.kode, judul: (a && a.judul) || '', noSurat: (a && a.noSurat) || '',
       pso: titleCase((a && a.pso) || first.pso || 'Lainnya'), jenis: (a && a.jenis) || first.jenis || '', statusAdkon: (a && a.status) || '',
       rbt: a ? a.rbt : null, realisasi: a ? a.realisasi : null, bulanIni: a ? a.bulanIni : null, serapan: a ? a.serapan : null,
-      sisaMM: a ? a.sisaMM : null, mulai: a ? a.mulai : null, amandemen: a ? a.amandemen : '',
+      sisaMM: a ? a.sisaMM : null, rencanaMM: a ? a.rencanaMM : null, realMM: a ? a.realMM : null, mmBulanIni: a ? a.mmBulanIni : null,
+      mulai: a ? a.mulai : null, amandemen: a ? a.amandemen : '',
       aktual, plan, dev: aktual !== null && plan !== null ? aktual - plan : null, worst, akhir, sisaHari: daysUntil(akhir), codMax,
       sel: a && a.serapan !== null && aktual !== null ? a.serapan - aktual : null,
       habisSebelumCod: !!(akhir && codMax && akhir < codMax),
@@ -401,6 +437,20 @@ function rbtPerPso(rows) {
     if (!m.has(k)) m.set(k, { pso: name, rbt: 0, real: 0, n: 0 });
     const e = m.get(k);
     e.rbt += r.rbt; e.real += r.realisasi || 0; e.n += 1;
+  }
+  return m;
+}
+
+// Pagu man-month (rencana MM) vs realisasi per PSO. rows: penugasan/adkon dengan field pso, rencanaMM, realMM.
+function mmPerPso(rows) {
+  const m = new Map();
+  for (const r of rows) {
+    if (!r.rencanaMM) continue;
+    const name = r.pso || 'Lainnya';
+    const k = norm(name);
+    if (!m.has(k)) m.set(k, { pso: name, plan: 0, real: 0, bulanIni: 0, n: 0 });
+    const e = m.get(k);
+    e.plan += r.rencanaMM; e.real += r.realMM || 0; e.bulanIni += r.mmBulanIni || 0; e.n += 1;
   }
   return m;
 }

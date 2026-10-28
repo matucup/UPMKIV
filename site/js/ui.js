@@ -77,7 +77,11 @@ function openList(cfg) {
   $('modal-sub').textContent = cfg.sub || '';
   $('modal-tools').innerHTML = `<input type="search" id="modal-search" class="search" placeholder="Cari di daftar ini…" aria-label="Cari di daftar ini"><span id="modal-count" class="count"></span>`;
   const searchable = cfg.rows.map((r) => cfg.cols.map((c) => c.val(r)).join(' ').toLowerCase());
-  const keys = cfg.rows.map((r) => cfg.cols.map((c) => sortKey(c.val(r))));
+  const keys = cfg.rows.map((r) => cfg.cols.map((c) => {
+    if (!c.sort) return sortKey(c.val(r));
+    const v = c.sort(r); // nilai angka mentah untuk kolom yang tampilannya sudah diformat
+    return v === null || v === undefined || Number.isNaN(v) ? { t: 0 } : { t: 1, n: v };
+  }));
   // Urutan asli dipertahankan hanya bila pemanggil menyebutnya ("Urut dari ..."); selain itu menaik menurut kolom kiri ke kanan.
   if (!cfg._sort) cfg._sort = { col: cfg.sub && /urut/i.test(cfg.sub) ? null : -1, dir: 1 };
   const sortBy = cfg._sort;
@@ -95,7 +99,7 @@ function openList(cfg) {
     const shown = idx.slice(0, 500);
     $('modal-count').textContent = `${idx.length} dari ${cfg.rows.length}${idx.length > 500 ? ' (500 teratas)' : ''}`;
     $('modal-body').innerHTML = shown.length
-      ? `<div class="table-wrap"><table class="table"><thead><tr>${cfg.cols.map((c, ci) => { const on = sortBy.col === ci || (sortBy.col === -1 && ci === 0); return `<th class="sortable${c.num ? ' num' : ''}" data-col="${ci}" tabindex="0" role="columnheader" aria-sort="${on ? (sortBy.dir > 0 ? 'ascending' : 'descending') : 'none'}" title="Klik untuk mengurutkan">${esc(c.label)}<span class="sort-ind">${on ? (sortBy.dir > 0 ? ' ▲' : ' ▼') : ''}</span></th>`; }).join('')}</tr></thead><tbody>${shown.map((i) => `<tr${cfg.record || cfg.card ? ` class="clickable" tabindex="0" data-i="${i}"` : ''}>${cfg.cols.map((c) => `<td${c.num ? ' class="num"' : ''}>${c.html ? c.html(cfg.rows[i]) : esc(c.val(cfg.rows[i]))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`
+      ? `<div class="table-wrap"><table class="table"><thead><tr>${cfg.cols.map((c, ci) => { const on = sortBy.col === ci || (sortBy.col === -1 && ci === 0); return `<th class="sortable${c.num ? ' num' : ''}" data-col="${ci}" tabindex="0" role="columnheader" aria-sort="${on ? (sortBy.dir > 0 ? 'ascending' : 'descending') : 'none'}" title="Klik untuk mengurutkan">${esc(c.label)}<span class="sort-ind">${on ? (sortBy.dir > 0 ? ' ▲' : ' ▼') : ''}</span></th>`; }).join('')}</tr></thead><tbody>${shown.map((i) => `<tr${cfg.record || cfg.card ? ` class="clickable" tabindex="0" data-i="${i}"` : ''}>${cfg.cols.map((c) => `<td${c.num ? ' class="num"' : ''}>${c.html ? c.html(cfg.rows[i]) : esc(c.val(cfg.rows[i]))}</td>`).join('')}</tr>`).join('')}</tbody>${cfg.footer ? `<tfoot><tr>${cfg.footer(idx.map((i) => cfg.rows[i])).map((t, ci) => `<td${cfg.cols[ci] && cfg.cols[ci].num ? ' class="num"' : ''}>${esc(t)}</td>`).join('')}</tr></tfoot>` : ''}</table></div>`
       : '<p class="empty">Tidak ada data yang cocok.</p>';
   };
   $('modal-search').addEventListener('input', draw);
@@ -183,3 +187,47 @@ function showBanner(failed) {
 const fmtRp = (n) => (n >= 1e9 ? `Rp ${(n / 1e9).toLocaleString('id-ID', { maximumFractionDigits: 2 })} M` : n >= 1e6 ? `Rp ${(n / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 1 })} jt` : `Rp ${Math.round(n).toLocaleString('id-ID')}`);
 const fmtPct = (n) => (n === null || n === undefined ? '-' : `${n.toLocaleString('id-ID', { maximumFractionDigits: 1 })}%`);
 const fmtDev = (n) => (n === null || n === undefined ? '-' : `${n > 0 ? '+' : ''}${n.toLocaleString('id-ID', { maximumFractionDigits: 1 })}`);
+
+/* Pemberitahuan non-galat (mis. penyamaan nama PSO), ditampilkan di bawah banner galat. */
+function showNotice(msgs) {
+  let el = document.getElementById('notice');
+  if (!el) {
+    const after = document.getElementById('banner');
+    if (!after) return;
+    el = document.createElement('div');
+    el.id = 'notice';
+    el.className = 'banner notice';
+    after.insertAdjacentElement('afterend', el);
+  }
+  el.hidden = !msgs.length;
+  el.innerHTML = msgs.map((m) => `<div>${esc(m)}</div>`).join('');
+}
+
+/* Daftar pagu man-month (rencana) vs realisasi per proyek/penugasan; baris bawah = total daftar yang tampil. */
+function mmSum(rows) {
+  const plan = rows.reduce((a, r) => a + (r.rencanaMM || 0), 0);
+  const real = rows.reduce((a, r) => a + (r.realMM || 0), 0);
+  const now = rows.reduce((a, r) => a + (r.mmBulanIni || 0), 0);
+  return { plan, real, now, sisa: plan - real, pct: plan ? (real / plan) * 100 : null };
+}
+
+function mmPaguList(title, rows, withCard) {
+  const t = mmSum(rows);
+  const num = (f) => (r) => (r[f] === null || r[f] === undefined ? null : r[f]);
+  return {
+    title,
+    sub: `${rows.length} proyek/penugasan · pagu ${fmt(t.plan)} MM · realisasi ${fmt(t.real)} MM (${fmtPct(t.pct)}) · sisa ${fmt(t.sisa)} MM`,
+    rows,
+    cols: [
+      { label: 'PSO', val: (r) => r.pso },
+      { label: 'Proyek / penugasan', val: (r) => r.nama, html: (r) => `${esc(r.nama)}<div class="item-sub">${esc(r.kode)}${r.noSurat ? ` · ${esc(r.noSurat)}` : ''}</div>` },
+      { label: 'Pagu MM', val: (r) => (r.rencanaMM ? fmt(r.rencanaMM) : '-'), num: true, sort: num('rencanaMM') },
+      { label: 'Realisasi MM', val: (r) => (r.realMM === null || r.realMM === undefined ? '-' : fmt(r.realMM)), num: true, sort: num('realMM') },
+      { label: 'Serapan MM', val: (r) => (r.rencanaMM && r.realMM !== null && r.realMM !== undefined ? fmtPct((r.realMM / r.rencanaMM) * 100) : '-'), num: true, sort: (r) => (r.rencanaMM && r.realMM !== null && r.realMM !== undefined ? r.realMM / r.rencanaMM : null) },
+      { label: 'Sisa MM', val: (r) => (r.rencanaMM ? fmt(r.rencanaMM - (r.realMM || 0)) : '-'), num: true, sort: (r) => (r.rencanaMM ? r.rencanaMM - (r.realMM || 0) : null) },
+      { label: 'MM bulan ini', val: (r) => (r.mmBulanIni ? fmt(r.mmBulanIni) : '-'), num: true, sort: num('mmBulanIni') },
+    ],
+    footer: (rs) => { const x = mmSum(rs); return ['Total', `${rs.length} baris`, fmt(x.plan), fmt(x.real), fmtPct(x.pct), fmt(x.sisa), fmt(x.now)]; },
+    ...(withCard && typeof openPenugasanCard === 'function' ? { card: (r, cfg) => openPenugasanCard(r, cfg) } : {}),
+  };
+}

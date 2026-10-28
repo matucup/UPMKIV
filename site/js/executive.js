@@ -46,28 +46,27 @@ function renderSdm() {
   const nMonth = win ? win.end - win.start : 0;
   const f1 = (n) => n.toLocaleString('id-ID', { maximumFractionDigits: 1 });
   const map = new Map();
-  const slot = (name) => { const k = norm(name); if (!map.has(k)) map.set(k, { pso: name, n: 0, now: 0, sum: 0, rbt: 0, real: 0, hasRbt: false }); return map.get(k); };
+  const slot = (name) => { const k = norm(name); if (!map.has(k)) map.set(k, { pso: name, n: 0, plan: 0, real: 0, demand: 0, hasMm: false }); return map.get(k); };
   personil.forEach((p) => { slot(p.pso).n += 1; });
-  if (win) {
-    mm.rows.forEach((r) => {
-      const x = slot(r.pso);
-      x.sum += r.vals.slice(win.start, win.end).reduce((a, b) => a + b, 0);
-      if (win.cur >= 0) x.now += r.vals[win.cur] || 0;
-    });
-  }
-  rbtPerPso(S.pen).forEach((v) => { const x = slot(v.pso); x.rbt += v.rbt; x.real += v.real; x.hasRbt = true; });
-  const rows = [...map.values()].sort((a, b) => b.n - a.n || b.sum - a.sum || String(a.pso).localeCompare(String(b.pso), 'id'));
-  const tot = rows.reduce((a, r) => ({ n: a.n + r.n, now: a.now + r.now, sum: a.sum + r.sum, rbt: a.rbt + r.rbt, real: a.real + r.real, hasRbt: a.hasRbt || r.hasRbt }), { n: 0, now: 0, sum: 0, rbt: 0, real: 0, hasRbt: false });
-  const gap = (r) => (nMonth ? r.sum / nMonth - r.n : null);
-  const gapCell = (g) => (g === null ? '-' : `<span class="badge ${g > 0 ? 'badge-warning' : 'badge-muted'}">${fmtDev(Math.round(g * 10) / 10)}</span>`);
-  const rbtCells = (r) => (r.hasRbt ? `<td class="num">${fmtRp(r.rbt)}</td><td class="num">${fmtRp(r.real)}</td><td class="num">${r.rbt ? fmtPct((r.real / r.rbt) * 100) : '-'}</td>` : '<td class="num">-</td><td class="num">-</td><td class="num">-</td>');
-  const tr = (r) => `<tr><td>${esc(r.pso)}</td><td class="num">${r.n}</td><td class="num">${win && win.cur >= 0 ? f1(r.now) : '-'}</td><td class="num">${nMonth ? f1(r.sum) : '-'}</td><td class="num">${nMonth ? f1(r.sum / nMonth) : '-'}</td><td class="num">${gapCell(gap(r))}</td>${rbtCells(r)}</tr>`;
+  mmPerPso(S.pen).forEach((v) => { const x = slot(v.pso); x.plan += v.plan; x.real += v.real; x.hasMm = true; });
+  if (win) mm.rows.forEach((r) => { slot(r.pso).demand += r.vals.slice(win.start, win.end).reduce((a, b) => a + b, 0); });
+  const rows = [...map.values()].sort((a, b) => String(a.pso).localeCompare(String(b.pso), 'id'));
+  const tot = rows.reduce((a, r) => ({ n: a.n + r.n, plan: a.plan + r.plan, real: a.real + r.real, demand: a.demand + r.demand, hasMm: a.hasMm || r.hasMm }), { n: 0, plan: 0, real: 0, demand: 0, hasMm: false });
+  const mmCells = (r) => (r.hasMm ? `<td class="num">${f1(r.plan)}</td><td class="num">${f1(r.real)}</td><td class="num">${fmtPct(r.plan ? (r.real / r.plan) * 100 : null)}</td><td class="num">${f1(r.plan - r.real)}</td>` : '<td class="num">-</td><td class="num">-</td><td class="num">-</td><td class="num">-</td>');
+  const tr = (r, i) => `<tr class="clickable" tabindex="0" data-i="${i}"><td>${esc(r.pso)}</td><td class="num">${r.n}</td>${mmCells(r)}<td class="num">${nMonth ? f1(r.demand) : '-'}</td></tr>`;
   const label = nMonth ? `${mm.months[win.start].label} – ${mm.months[win.end - 1].label}` : '';
   const byTugas = {};
   personil.forEach((p) => { const k = p.penugasan || '(belum diisi)'; byTugas[k] = (byTugas[k] || 0) + 1; });
   const top = Object.entries(byTugas).sort((a, b) => b[1] - a[1]).slice(0, 4);
   const mini = top.map(([k, v]) => `<div class="mini"><div class="stat-label">${esc(k)}</div><div class="stat-value">${v}</div><div class="stat-sub">${f1((v / personil.length) * 100)}% dari personil</div></div>`).join('');
-  $('sdm').innerHTML = `<div class="mini-row four">${mini}</div><div class="table-scroll"><table class="report-table"><thead><tr><th>PSO / unit</th><th class="num">Personil</th><th class="num">MM bulan ini</th><th class="num">MM ${nMonth} bulan</th><th class="num">Rata-rata MM/bulan</th><th class="num">Kebutuhan &minus; personil</th><th class="num">Pagu RBT</th><th class="num">Realisasi RBT</th><th class="num">Serapan</th></tr></thead><tbody>${rows.map((r) => tr(r)).join('')}</tbody><tfoot><tr><td>Total</td><td class="num">${tot.n}</td><td class="num">${win && win.cur >= 0 ? f1(tot.now) : '-'}</td><td class="num">${nMonth ? f1(tot.sum) : '-'}</td><td class="num">${nMonth ? f1(tot.sum / nMonth) : '-'}</td><td class="num">${gapCell(gap(tot))}</td>${rbtCells(tot)}</tr></tfoot></table></div><p class="panel-sub" style="margin-top:10px">Personil dari tab Personil (sheet Distribusi Man Month). Man-month dari tab LIVE_MM${label ? `, periode ${esc(label)}` : ''}. Kebutuhan &minus; personil = rata-rata man-month per bulan dikurangi jumlah personil; angka positif berarti kebutuhan lebih besar dari personil yang tercatat. Man-month mencakup TAD, jadi selisih ini indikatif. Pagu RBT (rencana biaya tunai) dan realisasinya dijumlahkan dari seluruh penugasan UPMK IV pada tab Adkon, dikelompokkan menurut PSO; penugasan yang dipegang beberapa PSO (mis. &ldquo;Aceh &amp; Sumatera Utara&rdquo;) tampil sebagai baris tersendiri.</p>`;
+  $('sdm').innerHTML = `<div class="mini-row four">${mini}</div><div class="panel-header" style="margin-top:18px"><div><h2>Pagu man-month vs realisasi per PSO</h2><p class="panel-sub">Klik baris untuk melihat pagu MM tiap proyek di PSO itu.</p></div><button type="button" id="mm-all" class="link-btn">Detail seluruh proyek &rarr;</button></div><div class="table-scroll"><table class="report-table"><thead><tr><th>PSO / unit</th><th class="num">Personil</th><th class="num">Pagu MM</th><th class="num">Realisasi MM</th><th class="num">Serapan MM</th><th class="num">Sisa MM</th><th class="num">Kebutuhan MM ${nMonth ? `${nMonth} bln ` : ""}ke depan</th></tr></thead><tbody>${rows.map(tr).join('')}</tbody><tfoot><tr><td>Total</td><td class="num">${tot.n}</td>${mmCells(tot)}<td class="num">${nMonth ? f1(tot.demand) : '-'}</td></tr></tfoot></table></div><p class="panel-sub" style="margin-top:10px">Personil dari tab Personil (sheet Distribusi Man Month). Pagu, realisasi, dan sisa MM dari tab Adkon (rencana dan realisasi man-month tiap penugasan). Kebutuhan MM ke depan dari tab LIVE_MM${label ? `, periode ${esc(label)}` : ''}.</p>`;
+  const pens = (r) => S.pen.filter((p) => p.rencanaMM && norm(p.pso) === norm(r.pso));
+  const open = (i) => openList(mmPaguList(`Pagu MM per proyek: ${rows[i].pso}`, pens(rows[i]), true));
+  $('sdm').onclick = (ev) => {
+    if (ev.target.closest('#mm-all')) { openList(mmPaguList('Pagu MM seluruh proyek', S.pen.filter((p) => p.rencanaMM), true)); return; }
+    const t = ev.target.closest('tr[data-i]'); if (t) open(+t.dataset.i);
+  };
+  $('sdm').onkeydown = (ev) => { const t = ev.target.closest('tr[data-i]'); if (t && ev.key === 'Enter') open(+t.dataset.i); };
 }
 
 function renderPa() {
@@ -89,7 +88,8 @@ function renderBiaya(rows) {
     ...byJenis.map((x) => [`Rata-rata ${x.j}`, `${fmtPct(x.s)} serapan`, `progres fisik ${fmtPct(x.p)} (${x.n} penugasan OPEN)`])];
   const sorted = [...list].sort((a, b) => Math.abs(b.sel ?? 0) - Math.abs(a.sel ?? 0));
   const row = (r, i) => `<tr class="clickable" tabindex="0" data-i="${i}"><td>${esc(r.nama)}<div class="item-sub">${esc(r.kode)} · ${esc(r.jenis)} · ${esc(r.statusAdkon)}${r.kontrak.length ? ` · ${r.kontrak.length} kontrak` : ' · belum ada kontrak terpantau'}</div></td><td class="num">${fmtRp(r.rbt)}</td><td class="num">${r.realisasi === null ? '-' : fmtRp(r.realisasi)}</td><td class="num">${fmtPct(r.serapan)}</td><td class="num">${fmtPct(r.aktual)}</td><td class="num">${r.sel === null ? '-' : `<span class="badge ${Math.abs(r.sel) > 25 ? 'badge-warning' : 'badge-muted'}">${fmtDev(r.sel)}</span>`}</td></tr>`;
-  $('pa').innerHTML = `<div class="mini-row four">${mini.map(([l, v, s]) => `<div class="mini"><div class="stat-label">${esc(l)}</div><div class="stat-value">${esc(v)}</div><div class="stat-sub">${esc(s)}</div></div>`).join('')}</div><div class="table-scroll"><table class="report-table"><thead><tr><th>Surat penugasan</th><th class="num">RBT</th><th class="num">Realisasi</th><th class="num">Serapan</th><th class="num">Progres fisik</th><th class="num">Selisih (poin)</th></tr></thead><tbody>${sorted.map(row).join('')}</tbody></table></div><p class="panel-sub" style="margin-top:10px">Selisih = serapan biaya dikurangi progres fisik. Selisih besar berarti biaya berjalan jauh di depan atau di belakang pekerjaan. Klik baris untuk membuka penugasan beserta kontrak-kontraknya.</p>`;
+  $('pa').innerHTML = `<div class="mini-row four">${mini.map(([l, v, s]) => `<div class="mini"><div class="stat-label">${esc(l)}</div><div class="stat-value">${esc(v)}</div><div class="stat-sub">${esc(s)}</div></div>`).join('')}</div><h3 class="sub-title">Realisasi RBT vs progres fisik per PSO</h3><div id="pa-psocost"></div><h3 class="sub-title">Per surat penugasan</h3><div class="table-scroll"><table class="report-table"><thead><tr><th>Surat penugasan</th><th class="num">RBT</th><th class="num">Realisasi</th><th class="num">Serapan</th><th class="num">Progres fisik</th><th class="num">Selisih (poin)</th></tr></thead><tbody>${sorted.map(row).join('')}</tbody></table></div><p class="panel-sub" style="margin-top:10px">Selisih = serapan biaya dikurangi progres fisik. Selisih besar berarti biaya berjalan jauh di depan atau di belakang pekerjaan. Klik baris untuk membuka penugasan beserta kontrak-kontraknya.</p>`;
+  mountPsoCost($('pa-psocost'), S.pen);
   const open = (i) => openPenugasanCard(sorted[i], null);
   $('pa').onclick = (ev) => { const tr = ev.target.closest('tr[data-i]'); if (tr) open(+tr.dataset.i); };
   $('pa').onkeydown = (ev) => { const tr = ev.target.closest('tr[data-i]'); if (tr && ev.key === 'Enter') open(+tr.dataset.i); };
@@ -157,12 +157,14 @@ async function loadLaporan() {
 async function refresh() {
   $('refresh').disabled = true;
   $('updated').textContent = 'Memuat data dari Google Sheets…';
+  PSO_LOG.clear();
   const [{ data, failed }, lap, mon] = await Promise.all([loadSources(JOBS), loadLaporan(), loadMonitoring()]);
   S = { ...data, datalist: mon.rows };
   S.pen = buildPenugasan(S.adkon, S.datalist);
   failed.push(...mon.failed);
   L = lap;
   showBanner([...failed, ...(lap && lap._failed ? lap._failed : [])]);
+  showNotice(psoNotices());
   $('periode').textContent = periodLabel();
   renderExecKpis(); renderPso(); renderAttention(); renderAlerts(); renderSdm(); renderPa(); renderPengadaan(); renderLaporan();
   $('updated').textContent = `Diperbarui ${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`;

@@ -8,3 +8,12 @@ const LAPORAN_ID = DATA_ID;
 // Bagian laporan di Executive Summary (KPI, Matlev/ERM, Kepatuhan, IDD, Kegiatan, Kontrak, Pengalihan Anggaran) disembunyikan sampai tab-tabnya diisi data nyata.
 // Ubah menjadi true bila sudah siap ditampilkan.
 const TAMPILKAN_LAPORAN = false;
+
+// Daftar PSO resmi. Nama di sheet mana pun dibaca lalu disamakan ke salah satu nama ini.
+const PSO_RESMI = ['Aceh', 'Sumatera Utara', 'Sumatera Barat', 'Jambi', 'Riau', 'Kantor UPMK IV'];
+// Alias: nama lain (huruf kecil) -> nama resmi. Tambahkan baris baru di sini bila ada penulisan lain di sheet.
+const PSO_ALIAS = {
+  'kepulauan riau': 'Riau', 'kepri': 'Riau', 'kep. riau': 'Riau', 'kep riau': 'Riau', 'batam': 'Riau',
+  'sumut': 'Sumatera Utara', 'sumbar': 'Sumatera Barat', 'nad': 'Aceh', 'nanggroe aceh darussalam': 'Aceh',
+  'upmk iv': 'Kantor UPMK IV', 'kantor upmk 4': 'Kantor UPMK IV',
+};

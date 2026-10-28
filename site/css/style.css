@@ -795,3 +795,11 @@ button:focus-visible, [tabindex]:focus-visible, input:focus-visible {
 .bar-row.rbt .bar-track.thin { height: 5px; }
 .bar-row.rbt .bar-fill.rbt-fill { background: var(--amber-accent); }
 .bar-row.rbt .bar-fill.rbt-over { background: var(--red); }
+
+.banner.notice { background: var(--blue-bg); border-color: #C5D8FB; color: #1B4FB0; }
+.banner.notice div + div { margin-top: 4px; }
+.table tfoot td { font-weight: 700; border-top: 2px solid var(--border); background: var(--bg); }
+.bar-row.rbt .mm-detail { grid-column: 1 / -1; justify-self: start; font-size: 11.5px; color: var(--blue); font-weight: 600; }
+.bar-row.rbt .mm-detail:hover { text-decoration: underline; }
+.sub-title { margin: 22px 0 10px; font-size: 14px; font-weight: 700; color: var(--navy); }
+.sub-title:first-child { margin-top: 0; }
