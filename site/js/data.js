@@ -46,9 +46,9 @@ const clean = (s) => String(s ?? '').replace(/\s+/g, ' ').trim();
    - setiap perubahan isi atau nama yang tidak dikenal dicatat di PSO_LOG supaya terlihat di halaman. */
 const PSO_LOG = new Map();
 
-function canonPso(raw, src) {
+function canonPso(raw, src, ref) {
   const orig = clean(raw);
-  if (!orig) return '';
+  if (!orig || orig === '-' || /^lainnya$/i.test(orig)) return orig === '-' ? '' : orig;
   const noPrefix = clean(orig.replace(/^PSO\s+/i, ''));
   const first = clean(noPrefix.split(/\s*(?:,|&|\/|\s+dan\s+(?:PSO\s+)?)\s*/i)[0]);
   const key = norm(first);
@@ -58,19 +58,32 @@ function canonPso(raw, src) {
   const known = PSO_RESMI.includes(canon);
   if (changed || !known) {
     const k = `${src}\u0001${orig}`;
-    const e = PSO_LOG.get(k) || { src, orig, canon, n: 0, known };
+    const e = PSO_LOG.get(k) || { src, orig, canon, n: 0, known, refs: [] };
     e.n += 1;
+    if (ref && e.refs.length < 3 && !e.refs.includes(clean(ref))) e.refs.push(clean(ref));
     PSO_LOG.set(k, e);
   }
   return canon;
+}
+
+// PSO kosong dicatat juga (baris tetap dipakai dengan PSO "Lainnya").
+function logPsoBlank(src, ref) {
+  const k = `${src}\u0001(kosong)`;
+  const e = PSO_LOG.get(k) || { src, orig: '(kosong)', canon: 'Lainnya', n: 0, known: false, refs: [] };
+  e.n += 1;
+  if (ref && e.refs.length < 3 && !e.refs.includes(clean(ref))) e.refs.push(clean(ref));
+  PSO_LOG.set(k, e);
 }
 
 function psoNotices() {
   const fixed = [], unknown = [];
   PSO_LOG.forEach((e) => (e.known ? fixed : unknown).push(e));
   const msgs = [];
-  if (fixed.length) msgs.push(`Nama PSO disamakan otomatis: ${fixed.map((e) => `"${e.orig}" menjadi ${e.canon} (${e.src}, ${e.n} baris)`).join('; ')}. Sebaiknya diseragamkan juga di sheet sumbernya.`);
-  if (unknown.length) msgs.push(`PSO tidak dikenal: ${unknown.map((e) => `"${e.orig}" (${e.src}, ${e.n} baris)`).join('; ')}. Tambahkan alias di js/config.js (PSO_ALIAS) bila itu penulisan lain dari PSO yang ada.`);
+  if (fixed.length) msgs.push(`Nama PSO disamakan otomatis: ${fixed.map((e) => `"${e.orig}" menjadi ${e.canon} (${e.src}, ${e.n} baris${e.refs.length ? `, mis. ${e.refs.join(' | ')}` : ''})`).join('; ')}. Sebaiknya diseragamkan juga di sheet sumbernya.`);
+  const blank = unknown.filter((e) => e.orig === '(kosong)');
+  unknown.splice(0, unknown.length, ...unknown.filter((e) => e.orig !== '(kosong)'));
+  if (blank.length) msgs.push(`Kolom PSO kosong: ${blank.map((e) => `${e.src}, ${e.n} baris${e.refs.length ? ` (mis. ${e.refs.join(' | ')})` : ''}`).join('; ')}. Baris ini dihitung sebagai "Lainnya".`);
+  if (unknown.length) msgs.push(`PSO tidak dikenal: ${unknown.map((e) => `"${e.orig}" (${e.src}, ${e.n} baris${e.refs.length ? `, mis. ${e.refs.join(' | ')}` : ''})`).join('; ')}. Tambahkan alias di js/config.js (PSO_ALIAS) bila itu penulisan lain dari PSO yang ada.`);
   return msgs;
 }
 
@@ -100,7 +113,7 @@ function normalizeProyek(grid) {
     const epc = g('Proyek EPC');
     const kode = g('Kode Lokasi');
     if (!judul && !kode && !epc) continue;
-    const pso = canonPso(g('PSO'), 'Daftar Proyek') || '-';
+    const pso = canonPso(g('PSO'), 'Daftar Proyek', g('Kode Lokasi')) || '-';
     const akhir = parseDate(g('Akhir Penugasan')) || parseDate(g('COD Amandemen')) || parseDate(g('COD Kontrak'));
     const daysLeft = akhir ? Math.ceil((akhir - today) / 864e5) : null;
     const status = daysLeft === null ? (g('PIC') ? 'Tanpa tanggal' : 'Belum ditugaskan') : daysLeft < 0 ? 'Berakhir' : daysLeft <= 90 ? 'Segera berakhir' : 'Berjalan';
@@ -130,7 +143,7 @@ function normalizePersonil(grid) {
     const proyek = cellAt(row, h, 'PROYEK');
     const g = (n) => cellAt(row, h, n);
     out.push({
-      nama, pso: canonPso(g('PSO'), 'Personil') || '-', penugasan: g('PENUGASAN'), kualifikasi: g('KUALIFIKASI'), proyek,
+      nama, pso: canonPso(g('PSO'), 'Personil', nama) || '-', penugasan: g('PENUGASAN'), kualifikasi: g('KUALIFIKASI'), proyek,
       _f: [['Nama', nama], ['PSO', g('PSO')], ['Penugasan', g('PENUGASAN')], ['Kualifikasi', g('KUALIFIKASI')],
         ['Proyek', proyek], ['Tanggal Awal Bergabung', g('TANGGAL AWAL BERGABUNG')]],
     });
@@ -155,7 +168,7 @@ function normalizeMM(grid) {
     if (!pso || !proyek) continue;
     const vals = months.map((mo) => parseNum(row[mo.col]) || 0);
     rows.push({
-      pso: canonPso(pso, 'LIVE_MM'), proyek, posisi: cellAt(row, h, 'Posisi'), keahlian: cellAt(row, h, 'Keahlian'),
+      pso: canonPso(pso, 'LIVE_MM', proyek), proyek, posisi: cellAt(row, h, 'Posisi'), keahlian: cellAt(row, h, 'Keahlian'),
       kualifikasi: cellAt(row, h, 'Kualifikasi Dalam SLA') || cellAt(row, h, 'Kualifikasi Maks'), vals,
     });
   }
@@ -240,8 +253,10 @@ function normalizeDatalist(grid) {
   for (const row of grid.slice(h.row + 1)) {
     const g = (n) => cellAt(row, h, n);
     if (!g('Nama Proyek')) continue;
-    const pst = g('PST');
-    const pso = /^PSO /i.test(pst) ? canonPso(pst, 'Datalist_Pusmanpro') : 'Lainnya';
+    if (h.index[norm('UPMK')] !== undefined && g('UPMK') && norm(g('UPMK')) !== norm(UPMK_SAYA)) continue; // sheet bersama banyak UPMK
+    const pst = g('PSO') || g('PST');
+    const pso = canonPso(pst, 'Datalist_Pusmanpro', `${g('Kode Lokasi')} ${g('Nama Proyek')}`) || 'Lainnya';
+    if (!pst) logPsoBlank('Datalist_Pusmanpro', `${g('Kode Lokasi')} ${g('Nama Proyek')}`);
     const issues = [];
     for (let i = 1; i <= 5; i++) {
       const kat = g('Kategori' + i);
@@ -367,15 +382,15 @@ function normalizeAdkon(grid) {
   const out = [];
   for (const row of grid.slice(h.row + 1)) {
     const g = (n) => cellAt(row, h, n);
-    if (norm(g('UPMK New')) !== 'upmk iv' || !g('KODE LOKASI')) continue;
+    if (norm(g('UPMK New')) !== norm(UPMK_SAYA) || !g('KODE LOKASI')) continue;
     const rbt = parseNum(g('RENCANA BIAYA TUNAI (RBT)'));
     const real = parseNum(g('REALISASI RBT'));
-    const pst = g('PST Sesuai KEP GM');
+    const pst = g('PSO Sesuai KEP GM') || g('PST Sesuai KEP GM');
     const lokasi = g('LOKASI');
     const akhir = akhirCols.map((i) => parseDate(row[i])).find(Boolean) || null;
     out.push({
       kode: g('KODE LOKASI'), nama: g('NAMA PROYEK'), judul: g('Judul STg'), noSurat: g('NOSurat Penugasan'), amandemen: g('Amandemen Terakhir'),
-      status: g('STATUS'), jenis: g('JENIS'), subJenis: g('SUB SUB JENIS'), pso: /^PSO /i.test(pst) ? canonPso(pst, 'Adkon') : canonPso(lokasi, 'Adkon (kolom LOKASI)') || 'Lainnya',
+      status: g('STATUS'), jenis: g('JENIS'), subJenis: g('SUB SUB JENIS'), pso: (pst ? canonPso(pst, 'Adkon', `${g('KODE LOKASI')} ${g('NAMA PROYEK')}`) : canonPso(lokasi, 'Adkon (kolom LOKASI)', `${g('KODE LOKASI')} ${g('NAMA PROYEK')}`)) || 'Lainnya',
       rbt, realisasi: real, bulanIni: parseNum(g('REALISASI RBT BULAN INI')), periode: parseDate(g('PERIODE')),
       mulai: parseDate(g('Mulai Penugasan')), akhir, sisaMM: parseNum(g('SISA MAN-MONTH')),
       rencanaMM: parseNum(g('RENCANA MAN-MONTH (MM)')), realMM: parseNum(g('REALISASI MM')), mmBulanIni: parseNum(g('REALISASI MM BULAN INI')),

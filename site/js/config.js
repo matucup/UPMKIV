@@ -17,3 +17,6 @@ const PSO_ALIAS = {
   'sumut': 'Sumatera Utara', 'sumbar': 'Sumatera Barat', 'nad': 'Aceh', 'nanggroe aceh darussalam': 'Aceh',
   'upmk iv': 'Kantor UPMK IV', 'kantor upmk 4': 'Kantor UPMK IV',
 };
+
+// Hanya baris milik UPMK ini yang dibaca dari sheet yang memuat banyak UPMK (kolom "UPMK" pada Datalist, "UPMK New" pada Adkon).
+const UPMK_SAYA = 'UPMK IV';
