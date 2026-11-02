@@ -20,10 +20,13 @@ Pengaturan satu kali: Settings > Pages > Build and deployment > Source: **GitHub
 
 ## Nama PSO yang seragam
 
-Nama PSO ditulis berbeda-beda di tiap sheet (mis. "Kepulauan Riau", "Aceh, Sumut", "PSO Riau"). Kode menyamakannya lewat `canonPso()` di `site/js/data.js`:
+Nama PSO ditulis berbeda-beda di tiap sheet (mis. "Kepulauan Riau", "Aceh, Sumut", "PSO Riau", bahkan judul proyek). Kode menyamakannya lewat `resolvePso()` di `site/js/data.js`:
 
-- awalan `PSO ` dibuang; nama gabungan ("Aceh, Sumut", "A & B", "A dan PSO B") diambil bagian pertamanya;
-- alias dipetakan lewat `PSO_ALIAS` di `site/js/config.js`; daftar PSO resmi ada di `PSO_RESMI`;
-- setiap nama yang diubah atau tidak dikenal ditampilkan sebagai kotak biru di halaman, lengkap dengan nama tab sumbernya.
+1. Nilai kolom PSO dipetakan langsung: awalan `PSO ` dibuang; nama gabungan ("Aceh, Sumut", "A & B", "A dan PSO B") diambil bagian pertamanya; alias dipetakan lewat `PSO_ALIAS` di `site/js/config.js` (daftar PSO resmi ada di `PSO_RESMI`).
+2. Bila isinya bukan nama PSO (mis. judul proyek), PSO dicari di dalam teksnya (yang disebut paling awal), lalu di kolom pembantu: Adkon memakai `Project Site Team (PST) New` lalu `LOKASI`; Datalist memakai `Lokasi`; Daftar Proyek memakai `Provinsi`.
+3. Penyamaan otomatis tidak ditampilkan di halaman; rinciannya ada di konsol browser (`[PSO] disamakan otomatis`).
+4. Kotak biru di halaman hanya muncul bila perlu tindakan: PSO kosong yang tidak bisa ditebak, isi yang bukan nama PSO dan tidak bisa ditebak, atau nama PSO baru. Kotak itu menyebut tab dan contoh baris (kode + nama proyek).
 
-Bila muncul PSO baru atau penulisan baru, cukup tambahkan satu baris di `PSO_ALIAS` (atau satu nama di `PSO_RESMI`).
+Bila ada PSO baru atau penulisan baru, tambahkan satu baris di `PSO_ALIAS` (atau satu nama di `PSO_RESMI`).
+
+Datalist dan Adkon hanya membaca baris `UPMK_SAYA` (`UPMK IV`) karena sheet aslinya memuat banyak UPMK.
