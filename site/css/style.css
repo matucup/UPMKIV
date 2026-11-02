@@ -649,7 +649,8 @@ button:focus-visible, [tabindex]:focus-visible, input:focus-visible {
   .panels-grid.even, .panels-grid { grid-template-columns: 1fr; }
   .quicklinks-grid { grid-template-columns: 1fr 1fr; }
   .page-header { grid-template-columns: minmax(0, 1fr); row-gap: 8px; }
-  .page-header .refresh-box { grid-column: 1; grid-row: 3; white-space: normal; flex-wrap: wrap; }
+  .page-header .refresh-box { grid-column: 1; grid-row: 3; white-space: normal; flex-wrap: wrap; align-items: flex-start; max-width: none; }
+  .page-header .refresh-box .updated { text-align: left; }
   .app { flex-direction: column; }
   .sidebar { width: 100%; min-width: 0; height: auto; position: static; }
   .record { grid-template-columns: 1fr; }

@@ -83,8 +83,19 @@ function gridHint(grid) {
   return ` [${BUILD}; ${grid.length} baris; ${rows || 'kosong'}]`;
 }
 
+// Tab cermin di spreadsheet induk yang gagal menarik data hanya berisi satu sel galat (mis. #REF!).
+function sheetError(grid) {
+  if (grid.length > 2) return '';
+  const cells = grid.flat().map((c) => String(c ?? '').trim()).filter(Boolean);
+  return cells.length === 1 && /^#(REF|N\/A|ERROR|VALUE|NAME)/i.test(cells[0]) ? cells[0] : '';
+}
+
 async function parseSheet(src, fn) {
   const grid = await loadSheet(src);
+  const bad = sheetError(grid);
+  if (bad) {
+    throw new Error(`tab "${src.sheet}" di spreadsheet induk berisi galat Google ${bad}: penarikan data dari sheet asal gagal. Buka tab itu, klik sel A1, lalu klik "Izinkan akses" (Allow access); bila tombolnya tidak ada, periksa ID sheet asal di tab Sumber`);
+  }
   try {
     return fn(grid);
   } catch (e) {
