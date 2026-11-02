@@ -225,7 +225,7 @@ function mmPaguList(title, rows, withCard) {
       { label: 'Realisasi MM', val: (r) => (r.realMM === null || r.realMM === undefined ? '-' : fmt(r.realMM)), num: true, sort: num('realMM') },
       { label: 'Serapan MM', val: (r) => (r.rencanaMM && r.realMM !== null && r.realMM !== undefined ? fmtPct((r.realMM / r.rencanaMM) * 100) : '-'), num: true, sort: (r) => (r.rencanaMM && r.realMM !== null && r.realMM !== undefined ? r.realMM / r.rencanaMM : null) },
       { label: 'Sisa MM', val: (r) => (r.rencanaMM ? fmt(r.rencanaMM - (r.realMM || 0)) : '-'), num: true, sort: (r) => (r.rencanaMM ? r.rencanaMM - (r.realMM || 0) : null) },
-      { label: 'MM bulan ini', val: (r) => (r.mmBulanIni ? fmt(r.mmBulanIni) : '-'), num: true, sort: num('mmBulanIni') },
+      { label: 'Aktual MM bulan ini', val: (r) => (r.mmBulanIni ? fmt(r.mmBulanIni) : '-'), num: true, sort: num('mmBulanIni') },
     ],
     footer: (rs) => { const x = mmSum(rs); return ['Total', `${rs.length} baris`, fmt(x.plan), fmt(x.real), fmtPct(x.pct), fmt(x.sisa), fmt(x.now)]; },
     ...(withCard && typeof openPenugasanCard === 'function' ? { card: (r, cfg) => openPenugasanCard(r, cfg) } : {}),

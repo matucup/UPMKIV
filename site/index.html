@@ -32,9 +32,18 @@
       <section class="card panel chart-panel">
         <div class="panel-header">
           <h2>Man-month per bulan</h2>
-          <span class="legend"><i class="lg now"></i>Bulan ini <i class="lg win"></i>6 bulan ke depan <i class="lg"></i>Lainnya</span>
+          <span class="legend"><b>Rencana:</b> <i class="lg now"></i>Bulan ini <i class="lg win"></i>6 bulan ke depan <i class="lg"></i>Lainnya <b style="margin-left:10px">Aktual:</b> <i class="lg act"></i>Realisasi MM bulan periode data</span>
         </div>
         <div id="chart"></div>
+        <p class="panel-sub" id="chart-note" style="margin-top:8px"></p>
+      </section>
+
+      <section class="card panel chart-panel">
+        <div class="panel-header">
+          <div><h2>Pagu vs aktual man-month per PSO</h2><p class="panel-sub" id="mmcmp-note"></p></div>
+          <button type="button" id="mmcmp-all" class="link-btn">Detail per proyek &rarr;</button>
+        </div>
+        <div id="mmcmp"></div>
       </section>
 
       <div class="panels-grid even">

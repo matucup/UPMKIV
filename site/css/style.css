@@ -392,7 +392,7 @@ a:hover {
 .page-header > div:first-child { display: contents; }
 .page-header h1 { grid-column: 1; grid-row: 1; }
 .page-header p { grid-column: 1 / -1; grid-row: 2; margin-top: 4px; }
-.page-header .refresh-box { grid-column: 2; grid-row: 1; flex-direction: column-reverse; align-items: flex-end; gap: 6px; max-width: 520px; }
+.page-header .refresh-box { grid-column: 2; grid-row: 1; flex-direction: column-reverse; align-items: flex-end; gap: 6px; max-width: 400px; }
 .page-header .refresh-box .updated { white-space: normal; text-align: right; }
 
 .refresh-box { flex: 0 0 auto; }
@@ -804,3 +804,11 @@ button:focus-visible, [tabindex]:focus-visible, input:focus-visible {
 .bar-row.rbt .mm-detail:hover { text-decoration: underline; }
 .sub-title { margin: 22px 0 10px; font-size: 14px; font-weight: 700; color: var(--navy); }
 .sub-title:first-child { margin-top: 0; }
+
+/* Aktual man-month di grafik dan tabel perbandingan */
+.lg.act { background: #1F8A70; margin-left: 0; }
+#chart .act-bar { fill: #1F8A70; pointer-events: none; }
+#chart .act-lbl { font-size: 10px; font-weight: 700; fill: #1F8A70; text-anchor: middle; pointer-events: none; }
+.meter { display: inline-block; vertical-align: middle; width: 54px; height: 6px; margin-right: 6px; background: var(--border-light); border-radius: 99px; overflow: hidden; }
+.meter > i { display: block; height: 100%; background: var(--amber-accent); }
+.meter > i.over { background: var(--red); }

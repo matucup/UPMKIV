@@ -15,8 +15,8 @@ function parseDate(s) {
     const y = +m[3] < 100 ? 2000 + +m[3] : +m[3];
     return new Date(y, MONTHS_ID[m[2].toLowerCase()], +m[1]);
   }
-  m = /^([A-Za-z]+)\s+(\d{4})$/.exec(s);
-  if (m && MONTHS_ID[m[1].toLowerCase()] !== undefined) return new Date(+m[2], MONTHS_ID[m[1].toLowerCase()], 1);
+  m = /^([A-Za-z]{3,})[-\s](\d{2}|\d{4})$/.exec(s);
+  if (m && MONTHS_ID[m[1].toLowerCase()] !== undefined) return new Date(+m[2] < 100 ? 2000 + +m[2] : +m[2], MONTHS_ID[m[1].toLowerCase()], 1);
   m = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/.exec(s);
   if (m) {
     const y = +m[3] < 100 ? 2000 + +m[3] : +m[3];

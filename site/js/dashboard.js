@@ -97,12 +97,24 @@ function renderKpis() {
   $('kpis').onclick = (e) => { const b = e.target.closest('[data-k]'); if (b) cards[+b.dataset.k].open(); };
 }
 
+/* Aktual man-month dari Adkon (kolom REALISASI MM BULAN INI) hanya ada untuk bulan periode data. */
+function mmAktualBulan() {
+  const rows = S.adkon.filter((r) => r.periode && r.mmBulanIni !== null);
+  if (!rows.length) return null;
+  const latest = rows.reduce((m, r) => (r.periode > m ? r.periode : m), rows[0].periode);
+  const sel = rows.filter((r) => r.periode.getFullYear() === latest.getFullYear() && r.periode.getMonth() === latest.getMonth());
+  const idx = S.mm.months.findIndex((mo) => mo.y === latest.getFullYear() && mo.m === latest.getMonth());
+  return { year: latest.getFullYear(), month: latest.getMonth(), idx, rows: sel, total: sel.reduce((a, r) => a + (r.mmBulanIni || 0), 0) };
+}
+
 function renderChart() {
   const { mm } = S;
   const n = mm.months.length;
   if (!n) { $('chart').innerHTML = '<p class="empty">Belum ada data man-month.</p>'; return; }
   const totals = mm.months.map((_, i) => mm.rows.reduce((a, r) => a + r.vals[i], 0));
-  const max = Math.max(...totals, 1);
+  const act = mmAktualBulan();
+  const actTotal = act && act.idx >= 0 ? act.total : 0;
+  const max = Math.max(...totals, actTotal, 1);
   const step = max <= 10 ? 2 : Math.pow(10, Math.floor(Math.log10(max / 4))) * (max / 4 > 5 * Math.pow(10, Math.floor(Math.log10(max / 4))) ? 10 : max / 4 > 2 * Math.pow(10, Math.floor(Math.log10(max / 4))) ? 5 : 2);
   const top = Math.ceil(max / step) * step;
   const W = 1000, H = 250, pl = 44, pb = 34, pt = 14;
@@ -117,10 +129,20 @@ function renderChart() {
     const x = pl + i * bw + bw * 0.15;
     const label = Object.keys(MONTHS_ID).find((k) => MONTHS_ID[k] === mo.m && k.length === 3);
     const showYear = i === 0 || mo.m === 0;
-    g += `<g class="${cls}" data-i="${i}" tabindex="0" role="button" aria-label="${esc(mo.label)}: ${fmt(totals[i])} man-month"><title>${esc(mo.label)}: ${fmt(totals[i])} man-month</title><rect x="${x}" y="${y(totals[i])}" width="${bw * 0.7}" height="${Math.max(0, y(0) - y(totals[i]))}" rx="2"/></g>`;
+    g += `<g class="${cls}" data-i="${i}" tabindex="0" role="button" aria-label="${esc(mo.label)}: ${fmt(totals[i])} man-month"><title>${esc(mo.label)}: rencana ${fmt(totals[i])} man-month${act && act.idx === i ? ` · aktual ${fmt(act.total)}` : ''}</title><rect x="${x}" y="${y(totals[i])}" width="${bw * 0.7}" height="${Math.max(0, y(0) - y(totals[i]))}" rx="2"/></g>`;
+    if (act && act.idx === i) g += `<rect class="act-bar" x="${x + bw * 0.7 * 0.22}" y="${y(act.total)}" width="${bw * 0.7 * 0.56}" height="${Math.max(0, y(0) - y(act.total))}" rx="2"/><text class="act-lbl" x="${pl + i * bw + bw / 2}" y="${y(act.total) - 4}">${fmt(act.total)}</text>`;
     g += `<text x="${pl + i * bw + bw / 2}" y="${H - 16}" class="xtick">${label ? label[0].toUpperCase() + label.slice(1) : ''}</text>`;
     if (showYear) g += `<text x="${pl + i * bw + bw / 2}" y="${H - 3}" class="xtick yr">${mo.y}</text>`;
   });
+  const note = $('chart-note');
+  if (note) {
+    if (act && act.idx >= 0) {
+      const plan = totals[act.idx];
+      note.innerHTML = `Batang = rencana/distribusi per bulan (tab LIVE_MM). Batang hijau = <b>aktual</b> ${esc(mm.months[act.idx].label)} dari Adkon (REALISASI MM BULAN INI): <b>${fmt(act.total)}</b> man-month dibanding rencana <b>${fmt(plan)}</b> (${fmtPct(plan ? (act.total / plan) * 100 : null)}). Aktual bulan-bulan sebelumnya belum tersedia di sheet; klik batang untuk melihat rinciannya.`;
+    } else {
+      note.textContent = 'Aktual bulanan belum tersedia: kolom PERIODE atau REALISASI MM BULAN INI di tab Adkon belum terbaca.';
+    }
+  }
   $('chart').innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="group" aria-label="Man-month per bulan">${g}</svg>`;
   const open = (i) => {
     const rows = mm.rows.map((r) => ({ ...r, mm: r.vals[i] })).filter((r) => r.mm > 0).sort((a, b) => a.pso.localeCompare(b.pso) || a.proyek.localeCompare(b.proyek));
@@ -159,6 +181,35 @@ function renderPersonilMm() {
   };
   el.onclick = act;
   el.onkeydown = (e) => { if (e.key === 'Enter' && e.target.matches('[data-mm]')) act(e); };
+}
+
+/* Pagu vs aktual man-month per PSO: pagu (rencana total) dan realisasi kumulatif dari Adkon; rencana vs aktual bulan periode data. */
+function renderMmCompare() {
+  const { adkon, mm } = S;
+  const act = mmAktualBulan();
+  const f1 = (n) => n.toLocaleString('id-ID', { maximumFractionDigits: 1 });
+  const map = new Map();
+  const slot = (name) => { const k = norm(name); if (!map.has(k)) map.set(k, { pso: name, plan: 0, real: 0, now: 0, rencana: 0, hasAdkon: false }); return map.get(k); };
+  mmPerPso(adkon).forEach((v) => { const x = slot(v.pso); x.plan = v.plan; x.real = v.real; x.now = v.bulanIni; x.hasAdkon = true; });
+  if (act && act.idx >= 0) mm.rows.forEach((r) => { slot(r.pso).rencana += r.vals[act.idx] || 0; });
+  const rows = [...map.values()].sort((a, b) => String(a.pso).localeCompare(String(b.pso), 'id'));
+  const el = $('mmcmp');
+  if (!rows.some((r) => r.hasAdkon)) { el.innerHTML = '<p class="empty">Pagu MM belum tercatat di tab Adkon (kolom RENCANA MAN-MONTH).</p>'; $('mmcmp-note').textContent = ''; return; }
+  const tot = rows.reduce((a, r) => ({ plan: a.plan + r.plan, real: a.real + r.real, now: a.now + r.now, rencana: a.rencana + r.rencana }), { plan: 0, real: 0, now: 0, rencana: 0 });
+  const label = act && act.idx >= 0 ? mm.months[act.idx].label : '';
+  $('mmcmp-note').textContent = `Pagu = RENCANA MAN-MONTH, realisasi = REALISASI MM (kumulatif), keduanya per penugasan di tab Adkon${label ? ` · kolom ${label}: rencana dari LIVE_MM, aktual dari Adkon` : ''} · klik baris untuk rincian per proyek`;
+  const pct = (a, b) => (b ? (a / b) * 100 : null);
+  const cells = (r) => {
+    const p = pct(r.real, r.plan);
+    const d = label ? r.now - r.rencana : null;
+    return `<td class="num">${r.hasAdkon ? f1(r.plan) : '-'}</td><td class="num">${r.hasAdkon ? f1(r.real) : '-'}</td><td class="num">${p === null ? '-' : `<span class="meter"><i class="${p > 100 ? 'over' : ''}" style="width:${Math.min(100, p)}%"></i></span>${fmtPct(p)}`}</td><td class="num">${r.hasAdkon ? f1(r.plan - r.real) : '-'}</td>${label ? `<td class="num">${f1(r.rencana)}</td><td class="num">${r.hasAdkon ? f1(r.now) : '-'}</td><td class="num">${d === null || !r.hasAdkon ? '-' : `<span class="badge ${d < 0 ? 'badge-warning' : 'badge-muted'}">${fmtDev(Math.round(d * 10) / 10)}</span>`}</td>` : ''}`;
+  };
+  el.innerHTML = `<div class="table-scroll"><table class="report-table"><thead><tr><th>PSO</th><th class="num">Pagu MM</th><th class="num">Realisasi MM</th><th class="num">Serapan</th><th class="num">Sisa MM</th>${label ? `<th class="num">Rencana ${esc(label)}</th><th class="num">Aktual ${esc(label)}</th><th class="num">Aktual &minus; rencana</th>` : ''}</tr></thead><tbody>${rows.map((r, i) => `<tr class="clickable" tabindex="0" data-i="${i}"><td>${esc(r.pso)}</td>${cells(r)}</tr>`).join('')}</tbody><tfoot><tr><td>Total</td>${cells({ ...tot, hasAdkon: true })}</tr></tfoot></table></div>`;
+  const pens = (k) => adkon.filter((r) => r.rencanaMM && (k === null || norm(r.pso) === norm(k)));
+  const open = (i) => openList(mmPaguList(`Pagu vs aktual MM per proyek: ${rows[i].pso}`, pens(rows[i].pso)));
+  el.onclick = (e) => { const t = e.target.closest('tr[data-i]'); if (t) open(+t.dataset.i); };
+  el.onkeydown = (e) => { const t = e.target.closest('tr[data-i]'); if (t && e.key === 'Enter') open(+t.dataset.i); };
+  $('mmcmp-all').onclick = () => openList(mmPaguList('Pagu vs aktual MM seluruh proyek', pens(null)));
 }
 
 function renderPanels() {
@@ -208,6 +259,7 @@ async function refresh() {
   $('banner').textContent = failed.length ? `Data gagal dimuat dari Google Sheets: ${failed.join('; ')}. Bagian terkait dikosongkan. Pastikan sheet dibagikan sebagai "Siapa saja yang memiliki link".` : '';
   renderKpis();
   renderChart();
+  renderMmCompare();
   renderPanels();
   $('updated').textContent = `Dimuat: ${S.proyek.length} proyek · ${S.personil.length} personil · ${S.mm.rows.length} baris man-month · ${S.tad.length} baris TAD · Diperbarui ${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`;
   $('refresh').disabled = false;
