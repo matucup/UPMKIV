@@ -4,6 +4,8 @@
  */
 const CONFIG = {
   FOLDER_ID: '1IyXIvkUK5uMIuO7bx4lrb9aGeBTgYBhN', // folder berisi sheet yang Anda update
+  // Sheet tujuan rekap. Dipakai bila skrip dibuat di script.google.com (bukan dari menu Ekstensi di Sheet).
+  REKAP_SPREADSHEET_ID: '1M-WsgvPwUk1M8sYuIUNV93_9hnxGkODhmW_YsC8XTjs',
   TAB_SUMBER: '',          // nama tab yang dibaca di tiap file; kosong = otomatis cari tab yang headernya paling cocok
   TAB_REKAP: 'Rekap',
   TAB_LOG: 'Log',
@@ -14,6 +16,14 @@ const CONFIG = {
 
 const KOLOM = ['Kode Lokasi','Status','Periode','No Surat Penugasan','Jangka Waktu Penugasan','No Amandemen Penugasan','UPMK','PSO','Pemberi Tugas','Direksi Pekerjaan','Nama Proyek','No Kontrak','Kontraktor','Nilai Kontrak Original','Nilai Kontrak Akhir','No. Amandemen Nilai Kontrak Akhir','Sumber Dana','Tanggal Kontrak','Efektif Kontrak','COD Kontrak','COD Amandemen','No. Amd Waktu Kontrak','Kapasitas','Satuan Kapasitas','Detail','Masa Berlaku Bank Garansi','Lokasi','Progres Aktual (%)','Progres Plan(%)','Aktivitas','RLB','Energize','SLO','BAST 1','BAST 2','Kategori1','Detail1','Tindaklanjut1','Kategori2','Detail2','Tindaklanjut2','Kategori3','Detail3','Tindaklanjut3','Kategori4','Detail4','Tindaklanjut4','Kategori5','Detail5','Tindaklanjut5','Jenis','Milestone','to decimal actual','to decimal plan','Deviasi','Bullet'];
 const EXTRA = ['Sumber File','Sumber Tab','Baris Asal','Diambil Pada'];
+
+function sheetTujuan_() {
+  return SpreadsheetApp.getActive() || SpreadsheetApp.openById(CONFIG.REKAP_SPREADSHEET_ID);
+}
+
+function toast_(ss, pesan, judul) {
+  try { ss.toast(pesan, judul || 'Rekap', 8); } catch (e) { console.log(pesan); }
+}
 
 const norm_ = (s) => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]/g, '');
 const KEY_IDX = (() => { const m = {}; KOLOM.forEach((k, i) => { m[norm_(k)] = i; }); return m; })();
@@ -30,7 +40,7 @@ function ambilData() {
   const mulai = new Date();
   const tz = Session.getScriptTimeZone();
   const stempel = Utilities.formatDate(mulai, tz, 'yyyy-MM-dd HH:mm:ss');
-  const ss = SpreadsheetApp.getActive();
+  const ss = sheetTujuan_();
   const log = [];
   const hasil = [];
 
@@ -48,7 +58,7 @@ function ambilData() {
 
   tulisRekap_(ss, hasil);
   tulisLog_(ss, log, stempel, hasil.length);
-  ss.toast(hasil.length + ' baris dari ' + log.length + ' file. Diambil: ' + stempel, 'Rekap selesai', 8);
+  toast_(ss, hasil.length + ' baris dari ' + log.length + ' file. Diambil: ' + stempel, 'Rekap selesai');
 }
 
 /** Baca satu file; tambahkan baris ke `hasil`; kembalikan jumlah baris. */
@@ -118,7 +128,7 @@ function tulisLog_(ss, log, stempel, totalBaris) {
 function aktifkanOtomatis() {
   matikanOtomatis();
   ScriptApp.newTrigger('ambilData').timeBased().everyDays(1).atHour(CONFIG.JAM_OTOMATIS).create();
-  SpreadsheetApp.getActive().toast('Pembaruan otomatis harian aktif (jam ' + CONFIG.JAM_OTOMATIS + ').');
+  toast_(sheetTujuan_(), 'Pembaruan otomatis harian aktif (jam ' + CONFIG.JAM_OTOMATIS + ').');
 }
 
 function matikanOtomatis() {
