@@ -30,3 +30,8 @@ Nama PSO ditulis berbeda-beda di tiap sheet (mis. "Kepulauan Riau", "Aceh, Sumut
 Bila ada PSO baru atau penulisan baru, tambahkan satu baris di `PSO_ALIAS` (atau satu nama di `PSO_RESMI`).
 
 Datalist dan Adkon hanya membaca baris `UPMK_SAYA` (`UPMK IV`) karena sheet aslinya memuat banyak UPMK.
+
+## Input Man-Month (uji coba)
+
+Halaman `input-mm.html` mengirim realisasi MM per personil ke tab `MM_Aktual` di spreadsheet induk lewat Google Apps Script (`apps-script/Code.gs`).
+Pasang satu kali: Extensions > Apps Script di spreadsheet induk, tempel isi `Code.gs`, isi Script Property `PIN`, Deploy > Web app (Execute as: Me, Access: Anyone), lalu tempel alamatnya ke `INPUT_MM_URL` di `site/js/config.js`.

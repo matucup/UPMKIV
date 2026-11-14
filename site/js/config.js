@@ -20,3 +20,6 @@ const PSO_ALIAS = {
 
 // Hanya baris milik UPMK ini yang dibaca dari sheet yang memuat banyak UPMK (kolom "UPMK" pada Datalist, "UPMK New" pada Adkon).
 const UPMK_SAYA = 'UPMK IV';
+
+// Alamat Web App Apps Script penerima input Man-Month (lihat apps-script/Code.gs dan README). Kosong = halaman input belum aktif.
+const INPUT_MM_URL = '';
