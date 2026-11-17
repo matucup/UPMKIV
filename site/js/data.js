@@ -191,6 +191,7 @@ function normalizeMM(grid) {
       months.push({ col: i, label: clean(c), y: 2000 + +m[2], m: MONTHS_ID[m[1].toLowerCase()] });
     }
   });
+  if (!months.length) throw new Error('Kolom bulan (mis. Okt \'25) tidak ditemukan di baris judul Man-Month');
   const rows = [];
   for (const row of grid.slice(h.row + 1)) {
     const pso = cellAt(row, h, 'PSO');
@@ -203,6 +204,23 @@ function normalizeMM(grid) {
     });
   }
   return { months, rows };
+}
+
+/* Tab MM_Aktual (diisi dari halaman Input MM): Bulan (2026-11), Nama, PSO, Proyek, MM. Tab yang belum ada dianggap kosong. */
+function normalizeMmAktual(grid) {
+  const h = findHeader(grid, ['Bulan', 'Nama', 'MM']);
+  if (!h) return [];
+  const out = [];
+  for (const row of grid.slice(h.row + 1)) {
+    const g = (n) => cellAt(row, h, n);
+    const mm = parseNum(g('MM'));
+    let y, m;
+    const t = /^(\d{4})-(\d{1,2})/.exec(g('Bulan'));
+    if (t) { y = +t[1]; m = +t[2] - 1; } else { const d = parseDate(g('Bulan')); if (d) { y = d.getFullYear(); m = d.getMonth(); } }
+    if (y === undefined || mm === null || !g('Nama')) continue;
+    out.push({ y, m, nama: g('Nama'), pso: resolvePso([g('PSO')], 'MM_Aktual', g('Nama')), proyek: g('Proyek'), mm });
+  }
+  return out;
 }
 
 function normalizeTad(grid) {

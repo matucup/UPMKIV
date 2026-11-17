@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cek Data &middot; UPMK IV</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=__BUILD__">
+<style>
+.container > .card { padding:24px; }
+.cek td, .cek th { padding:8px 10px; text-align:left; vertical-align:top; border-bottom:1px solid #e5e7eb; font-size:14px; }
+.cek { width:100%; border-collapse:collapse; }
+.cek .ok { color:#14532d; font-weight:700; } .cek .bad { color:#b91c1c; font-weight:700; } .cek .warn { color:#92400e; font-weight:700; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div id="sidebar"></div>
+  <main class="main">
+    <div class="container">
+      <section class="card">
+        <h1>Cek Data</h1>
+        <p class="muted">Halaman untuk admin: memeriksa apakah setiap tab di spreadsheet induk terbaca oleh website. Bila ada yang <b>GAGAL</b>, ikuti petunjuk di kolom kanan.</p>
+        <div class="btn-row" style="margin:12px 0"><button class="btn" id="cek-ulang">Periksa ulang</button>
+          <a class="btn" style="text-decoration:none" id="cek-sheet" target="_blank" rel="noopener">Buka spreadsheet induk</a></div>
+        <div class="table-scroll"><table class="cek"><thead><tr><th>Tab</th><th>Dipakai untuk</th><th>Status</th><th>Keterangan / yang harus dilakukan</th></tr></thead><tbody id="cek-body"></tbody></table></div>
+      </section>
+    </div>
+  </main>
+</div>
+<script>
+(function () {
+  var v = Date.now();
+  ['sidebar', 'config', 'sheets', 'data', 'cek-data'].forEach(function (n) { document.write('<script src="js/' + n + '.js?t=' + v + '"><\/script>'); });
+})();
+</script>
+</body>
+</html>

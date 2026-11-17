@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: 'evidence-kpi.html', label: 'Evidence KPI' },
   { href: 'man-month.html', label: 'Man-Month' },
   { href: 'input-mm.html', label: 'Input MM (uji coba)' },
+  { href: 'cek-data.html', label: 'Cek Data (admin)' },
   { href: 'kajian.html', label: 'Kajian' },
   { href: 'lesson-learn.html', label: 'Lesson Learn' },
   { href: 'pakta-integritas.html', label: 'Pakta Integritas' },

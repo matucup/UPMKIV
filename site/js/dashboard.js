@@ -27,6 +27,7 @@ async function loadAll() {
       data[k] = k === 'mm' ? { months: [], rows: [] } : [];
     }
   }));
+  try { data.mmAktual = await parseSheet(SOURCES.mmAktual, normalizeMmAktual); } catch (e) { data.mmAktual = []; }
   return { data, failed };
 }
 
@@ -97,14 +98,39 @@ function renderKpis() {
   $('kpis').onclick = (e) => { const b = e.target.closest('[data-k]'); if (b) cards[+b.dataset.k].open(); };
 }
 
-/* Aktual man-month dari Adkon (kolom REALISASI MM BULAN INI) hanya ada untuk bulan periode data. */
-function mmAktualBulan() {
+/* Aktual man-month per bulan: dari tab MM_Aktual (input web); bulan periode Adkon dipakai bila bulan itu belum diinput. */
+function mmAktualSeri() {
+  const seri = new Map();  // indeks bulan -> { total, perPso: Map, src }
+  const at = (y, m, src) => {
+    const idx = S.mm.months.findIndex((mo) => mo.y === y && mo.m === m);
+    if (idx < 0) return null;
+    if (!seri.has(idx)) seri.set(idx, { idx, total: 0, perPso: new Map(), src });
+    return seri.get(idx);
+  };
+  (S.mmAktual || []).forEach((r) => {
+    const x = at(r.y, r.m, 'input');
+    if (!x) return;
+    x.total += r.mm; x.perPso.set(norm(r.pso), (x.perPso.get(norm(r.pso)) || 0) + r.mm);
+  });
   const rows = S.adkon.filter((r) => r.periode && r.mmBulanIni !== null);
-  if (!rows.length) return null;
-  const latest = rows.reduce((m, r) => (r.periode > m ? r.periode : m), rows[0].periode);
-  const sel = rows.filter((r) => r.periode.getFullYear() === latest.getFullYear() && r.periode.getMonth() === latest.getMonth());
-  const idx = S.mm.months.findIndex((mo) => mo.y === latest.getFullYear() && mo.m === latest.getMonth());
-  return { year: latest.getFullYear(), month: latest.getMonth(), idx, rows: sel, total: sel.reduce((a, r) => a + (r.mmBulanIni || 0), 0) };
+  if (rows.length) {
+    const latest = rows.reduce((m, r) => (r.periode > m ? r.periode : m), rows[0].periode);
+    const idx = S.mm.months.findIndex((mo) => mo.y === latest.getFullYear() && mo.m === latest.getMonth());
+    if (idx >= 0 && !seri.has(idx)) {
+      const x = at(latest.getFullYear(), latest.getMonth(), 'adkon');
+      rows.filter((r) => r.periode.getFullYear() === latest.getFullYear() && r.periode.getMonth() === latest.getMonth()).forEach((r) => {
+        x.total += r.mmBulanIni || 0; x.perPso.set(norm(r.pso), (x.perPso.get(norm(r.pso)) || 0) + (r.mmBulanIni || 0));
+      });
+    }
+  }
+  return seri;
+}
+
+/* Bulan terakhir yang punya aktual (dipakai tabel pagu vs aktual). */
+function mmAktualBulan() {
+  const seri = mmAktualSeri();
+  if (!seri.size) return null;
+  return seri.get(Math.max(...seri.keys()));
 }
 
 function renderChart() {
@@ -112,9 +138,9 @@ function renderChart() {
   const n = mm.months.length;
   if (!n) { $('chart').innerHTML = '<p class="empty">Belum ada data man-month.</p>'; return; }
   const totals = mm.months.map((_, i) => mm.rows.reduce((a, r) => a + r.vals[i], 0));
+  const seri = mmAktualSeri();
   const act = mmAktualBulan();
-  const actTotal = act && act.idx >= 0 ? act.total : 0;
-  const max = Math.max(...totals, actTotal, 1);
+  const max = Math.max(...totals, ...[...seri.values()].map((x) => x.total), 1);
   const step = max <= 10 ? 2 : Math.pow(10, Math.floor(Math.log10(max / 4))) * (max / 4 > 5 * Math.pow(10, Math.floor(Math.log10(max / 4))) ? 10 : max / 4 > 2 * Math.pow(10, Math.floor(Math.log10(max / 4))) ? 5 : 2);
   const top = Math.ceil(max / step) * step;
   const W = 1000, H = 250, pl = 44, pb = 34, pt = 14;
@@ -129,18 +155,19 @@ function renderChart() {
     const x = pl + i * bw + bw * 0.15;
     const label = Object.keys(MONTHS_ID).find((k) => MONTHS_ID[k] === mo.m && k.length === 3);
     const showYear = i === 0 || mo.m === 0;
-    g += `<g class="${cls}" data-i="${i}" tabindex="0" role="button" aria-label="${esc(mo.label)}: ${fmt(totals[i])} man-month"><title>${esc(mo.label)}: rencana ${fmt(totals[i])} man-month${act && act.idx === i ? ` · aktual ${fmt(act.total)}` : ''}</title><rect x="${x}" y="${y(totals[i])}" width="${bw * 0.7}" height="${Math.max(0, y(0) - y(totals[i]))}" rx="2"/></g>`;
-    if (act && act.idx === i) g += `<rect class="act-bar" x="${x + bw * 0.7 * 0.22}" y="${y(act.total)}" width="${bw * 0.7 * 0.56}" height="${Math.max(0, y(0) - y(act.total))}" rx="2"/><text class="act-lbl" x="${pl + i * bw + bw / 2}" y="${y(act.total) - 4}">${fmt(act.total)}</text>`;
+    g += `<g class="${cls}" data-i="${i}" tabindex="0" role="button" aria-label="${esc(mo.label)}: ${fmt(totals[i])} man-month"><title>${esc(mo.label)}: rencana ${fmt(totals[i])} man-month${seri.has(i) ? ` · aktual ${fmt(seri.get(i).total)}` : ''}</title><rect x="${x}" y="${y(totals[i])}" width="${bw * 0.7}" height="${Math.max(0, y(0) - y(totals[i]))}" rx="2"/></g>`;
+    if (seri.has(i)) { const a = seri.get(i).total; g += `<rect class="act-bar" x="${x + bw * 0.7 * 0.22}" y="${y(a)}" width="${bw * 0.7 * 0.56}" height="${Math.max(0, y(0) - y(a))}" rx="2"/><text class="act-lbl" x="${pl + i * bw + bw / 2}" y="${y(a) - 4}">${fmt(a)}</text>`; }
     g += `<text x="${pl + i * bw + bw / 2}" y="${H - 16}" class="xtick">${label ? label[0].toUpperCase() + label.slice(1) : ''}</text>`;
     if (showYear) g += `<text x="${pl + i * bw + bw / 2}" y="${H - 3}" class="xtick yr">${mo.y}</text>`;
   });
   const note = $('chart-note');
   if (note) {
-    if (act && act.idx >= 0) {
+    if (act) {
       const plan = totals[act.idx];
-      note.innerHTML = `Batang = rencana/distribusi per bulan (tab LIVE_MM). Batang hijau = <b>aktual</b> ${esc(mm.months[act.idx].label)} dari Adkon (REALISASI MM BULAN INI): <b>${fmt(act.total)}</b> man-month dibanding rencana <b>${fmt(plan)}</b> (${fmtPct(plan ? (act.total / plan) * 100 : null)}). Aktual bulan-bulan sebelumnya belum tersedia di sheet; klik batang untuk melihat rinciannya.`;
+      const asal = act.src === 'input' ? 'tab MM_Aktual (halaman Input MM)' : 'Adkon (REALISASI MM BULAN INI)';
+      note.innerHTML = `Batang = rencana per bulan (tab LIVE_MM). Batang hijau = <b>aktual</b> (${seri.size} bulan terisi). Terakhir ${esc(mm.months[act.idx].label)} dari ${asal}: <b>${fmt(act.total)}</b> man-month dibanding rencana <b>${fmt(plan)}</b> (${fmtPct(plan ? (act.total / plan) * 100 : null)}). Bulan lain diisi lewat halaman Input MM.`;
     } else {
-      note.textContent = 'Aktual bulanan belum tersedia: kolom PERIODE atau REALISASI MM BULAN INI di tab Adkon belum terbaca.';
+      note.textContent = 'Aktual bulanan belum tersedia: isi lewat halaman Input MM, atau lengkapi kolom PERIODE dan REALISASI MM BULAN INI di tab Adkon.';
     }
   }
   $('chart').innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="group" aria-label="Man-month per bulan">${g}</svg>`;
@@ -190,14 +217,14 @@ function renderMmCompare() {
   const f1 = (n) => n.toLocaleString('id-ID', { maximumFractionDigits: 1 });
   const map = new Map();
   const slot = (name) => { const k = norm(name); if (!map.has(k)) map.set(k, { pso: name, plan: 0, real: 0, now: 0, rencana: 0, hasAdkon: false }); return map.get(k); };
-  mmPerPso(adkon).forEach((v) => { const x = slot(v.pso); x.plan = v.plan; x.real = v.real; x.now = v.bulanIni; x.hasAdkon = true; });
-  if (act && act.idx >= 0) mm.rows.forEach((r) => { slot(r.pso).rencana += r.vals[act.idx] || 0; });
+  mmPerPso(adkon).forEach((v) => { const x = slot(v.pso); x.plan = v.plan; x.real = v.real; x.now = act ? (act.perPso.get(norm(v.pso)) || 0) : 0; x.hasAdkon = true; });
+  if (act) mm.rows.forEach((r) => { slot(r.pso).rencana += r.vals[act.idx] || 0; });
   const rows = [...map.values()].sort((a, b) => String(a.pso).localeCompare(String(b.pso), 'id'));
   const el = $('mmcmp');
   if (!rows.some((r) => r.hasAdkon)) { el.innerHTML = '<p class="empty">Pagu MM belum tercatat di tab Adkon (kolom RENCANA MAN-MONTH).</p>'; $('mmcmp-note').textContent = ''; return; }
   const tot = rows.reduce((a, r) => ({ plan: a.plan + r.plan, real: a.real + r.real, now: a.now + r.now, rencana: a.rencana + r.rencana }), { plan: 0, real: 0, now: 0, rencana: 0 });
-  const label = act && act.idx >= 0 ? mm.months[act.idx].label : '';
-  $('mmcmp-note').textContent = `Pagu = RENCANA MAN-MONTH, realisasi = REALISASI MM (kumulatif), keduanya per penugasan di tab Adkon${label ? ` · kolom ${label}: rencana dari LIVE_MM, aktual dari Adkon` : ''} · klik baris untuk rincian per proyek`;
+  const label = act ? mm.months[act.idx].label : '';
+  $('mmcmp-note').textContent = `Pagu = RENCANA MAN-MONTH, realisasi = REALISASI MM (kumulatif), keduanya per penugasan di tab Adkon${label ? ` · kolom ${label}: rencana dari LIVE_MM, aktual dari ${act.src === 'input' ? 'MM_Aktual' : 'Adkon'}` : ''} · klik baris untuk rincian per proyek`;
   const pct = (a, b) => (b ? (a / b) * 100 : null);
   const cells = (r) => {
     const p = pct(r.real, r.plan);

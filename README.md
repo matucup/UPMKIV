@@ -35,3 +35,5 @@ Datalist dan Adkon hanya membaca baris `UPMK_SAYA` (`UPMK IV`) karena sheet asli
 
 Halaman `input-mm.html` mengirim realisasi MM per personil ke tab `MM_Aktual` di spreadsheet induk lewat Google Apps Script (`apps-script/Code.gs`).
 Pasang satu kali: Extensions > Apps Script di spreadsheet induk, tempel isi `Code.gs`, isi Script Property `PIN`, Deploy > Web app (Execute as: Me, Access: Anyone), lalu tempel alamatnya ke `INPUT_MM_URL` di `site/js/config.js`.
+
+Panduan untuk admin (tanpa kode): lihat `PANDUAN_ADMIN.md`. Halaman `cek-data.html` memeriksa apakah setiap tab terbaca.

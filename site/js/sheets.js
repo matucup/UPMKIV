@@ -5,6 +5,8 @@ const SOURCES = {
   tad: { id: DATA_ID, sheet: 'DATA', range: 'A3:AC1500' },
   datalist: { id: DATA_ID, sheet: 'Datalist_Pusmanpro' },
   adkon: { id: DATA_ID, sheet: 'Adkon', range: 'A3:BZ1500' },
+  // Tab hasil input web (halaman Input MM). Boleh belum ada.
+  mmAktual: { id: DATA_ID, sheet: 'MM_Aktual', optional: true },
   pa: { id: DATA_ID, sheet: 'Monitoring PA' },
   pengadaan: { id: DATA_ID, sheet: 'Monitoring Pengadaan' },
 };
@@ -100,9 +102,16 @@ async function parseSheet(src, fn) {
     return fn(grid);
   } catch (e) {
     if (src.range) {
-      // Cadangan: bila rentang tidak dikenali Google, coba lagi tanpa rentang.
-      const plain = await loadSheet(src, false);
+      // Cadangan: baris judul bisa bergeser bila ada baris disisipkan/dihapus di sheet. Coba mulai dari baris 1-8, lalu tanpa rentang.
+      const m = /^([A-Z]+)(\d+):(.+)$/.exec(src.range);
+      const tries = [];
+      if (m) for (let r = 1; r <= 8; r++) if (r !== +m[2]) tries.push({ ...src, range: `${m[1]}${r}:${m[3]}` });
+      let plain = null;
+      for (const alt of tries) {
+        try { return fn(await loadSheet(alt)); } catch (x) { /* coba berikutnya */ }
+      }
       try {
+        plain = await loadSheet(src, false);
         return fn(plain);
       } catch (e2) {
         e.message += `${gridHint(grid)} | tanpa rentang:${gridHint(plain)}`;
