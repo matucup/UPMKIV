@@ -7,7 +7,7 @@
  * Tab cermin (Daftar Proyek, Personil, LIVE_MM, DATA, Datalist_Pusmanpro, Adkon) sengaja tidak ada di daftar.
  */
 const TABS = {
-  MM_Aktual: { key: ['Bulan', 'Nama', 'Proyek'], head: ['Bulan', 'Nama', 'PSO', 'Proyek', 'MM', 'Diinput_Pada'] },
+  MM_Aktual: { key: ['Bulan', 'PSO'], head: ['Bulan', 'PSO', 'Pegawai', 'TAD', 'MM', 'Diinput_Pada'] },
   Proyek: { key: ['ID_Paket'] },
   Progres_Bulanan: { key: ['Periode', 'ID_Paket'] },
   Isu: { key: ['ID_Isu'] },

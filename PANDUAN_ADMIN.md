@@ -9,7 +9,7 @@ Admin **tidak perlu menyentuh kode**. Pekerjaan admin hanya tiga hal di bawah.
 | Data | Diperbarui di mana | Cara |
 | --- | --- | --- |
 | Proyek, personil, rencana MM, TAD, Adkon, Datalist | Sheet **asal** masing-masing (daftar ada di tab `Sumber` spreadsheet induk) | Ubah di sheet asal seperti biasa. Dashboard ikut berubah sendiri. |
-| Aktual man-month per bulan | Halaman **Input MM** di website | Pilih bulan, isi PIN, pilih nama + proyek, isi MM, klik Kirim. |
+| Aktual man-month per bulan | Halaman **Input MM** di website | Pilih bulan, isi PIN, isi jumlah pegawai dan jumlah TAD per PSO (MM = pegawai + TAD), klik Kirim. |
 | Progres bulanan, isu, dokumen milestone, paket proyek, dan data laporan (KPI/kinerja, Matlev/ERM, kepatuhan, IDD mitra, kegiatan, status kontrak, pengalihan anggaran) | Halaman **Input Data Lain** di website | Pilih jenis data, isi PIN, isi formulir, klik Kirim. Kolom bertanda * adalah kunci. |
 
 Setelah mengubah data: buka website, klik **Muat ulang**. Tidak ada langkah lain.

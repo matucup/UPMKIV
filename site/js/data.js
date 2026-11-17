@@ -206,19 +206,20 @@ function normalizeMM(grid) {
   return { months, rows };
 }
 
-/* Tab MM_Aktual (diisi dari halaman Input MM): Bulan (2026-11), Nama, PSO, Proyek, MM. Tab yang belum ada dianggap kosong. */
+/* Tab MM_Aktual (diisi dari halaman Input MM): Bulan (2026-11), PSO, Pegawai, TAD, MM. MM = Pegawai + TAD. Tab yang belum ada dianggap kosong. */
 function normalizeMmAktual(grid) {
-  const h = findHeader(grid, ['Bulan', 'Nama', 'MM']);
+  const h = findHeader(grid, ['Bulan', 'PSO', 'MM']);
   if (!h) return [];
   const out = [];
   for (const row of grid.slice(h.row + 1)) {
     const g = (n) => cellAt(row, h, n);
-    const mm = parseNum(g('MM'));
+    const pegawai = parseNum(g('Pegawai')) ?? 0, tad = parseNum(g('TAD')) ?? 0;
+    const mm = parseNum(g('MM')) ?? pegawai + tad;
     let y, m;
     const t = /^(\d{4})-(\d{1,2})/.exec(g('Bulan'));
     if (t) { y = +t[1]; m = +t[2] - 1; } else { const d = parseDate(g('Bulan')); if (d) { y = d.getFullYear(); m = d.getMonth(); } }
-    if (y === undefined || mm === null || !g('Nama')) continue;
-    out.push({ y, m, nama: g('Nama'), pso: resolvePso([g('PSO')], 'MM_Aktual', g('Nama')), proyek: g('Proyek'), mm });
+    if (y === undefined || !g('PSO')) continue;
+    out.push({ y, m, pso: resolvePso([g('PSO')], 'MM_Aktual', g('PSO')), pegawai, tad, mm });
   }
   return out;
 }

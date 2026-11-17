@@ -3,13 +3,13 @@ const SIDEBAR_BUILD = '__BUILD__';
 
 const NAV_ITEMS = [
   { href: 'index.html', label: 'Beranda' },
+  { href: 'input-mm.html', label: 'Input MM' },
   { href: 'monitoring-progress.html', label: 'Monitoring Progress' },
   { href: 'sk-pso.html', label: 'SK PSO' },
   { href: 'executive-summary.html', label: 'Executive Summary' },
   { href: 'laporan.html', label: 'Laporan' },
   { href: 'evidence-kpi.html', label: 'Evidence KPI' },
   { href: 'man-month.html', label: 'Man-Month' },
-  { href: 'input-mm.html', label: 'Input MM' },
   { href: 'input.html', label: 'Input Data Lain' },
   { href: 'cek-data.html', label: 'Cek Data (admin)' },
   { href: 'kajian.html', label: 'Kajian' },

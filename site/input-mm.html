@@ -17,6 +17,9 @@
 @media (max-width:720px){ .in-row { grid-template-columns:1fr 1fr; } }
 .in-msg { margin-top:12px; padding:10px 12px; border-radius:6px; font-size:14px; }
 .in-msg.ok { background:#e7f6ec; color:#14532d; } .in-msg.err { background:#fde8e8; color:#7f1d1d; }
+.cek { width:100%; border-collapse:collapse; } .cek td, .cek th { padding:6px 10px; text-align:left; border-bottom:1px solid #e5e7eb; font-size:14px; }
+.cek input { width:90px; padding:6px; border:1px solid #d0d5dd; border-radius:6px; font:inherit; }
+.cek tfoot td { font-weight:700; }
 </style>
 </head>
 <body>
@@ -26,18 +29,15 @@
     <div class="container">
       <section class="card">
         <h1>Input Man-Month Aktual</h1>
-        <p class="muted">Isi realisasi MM per personil untuk satu bulan. Data masuk ke tab <strong>MM_Aktual</strong> di spreadsheet induk. Mengirim ulang bulan + nama + proyek yang sama akan <strong>menimpa</strong> nilai lama, bukan menggandakan.</p>
+        <p class="muted">Isi <b>jumlah pegawai</b> dan <b>jumlah TAD</b> yang bekerja pada bulan terpilih, per PSO. <b>Man-month = pegawai + TAD</b> (dihitung otomatis). Mengirim ulang bulan yang sama menimpa nilai lama. Hasilnya tampil di grafik Man-month per bulan dan tabel Pagu vs aktual di Beranda.</p>
         <div id="in-warn" class="banner" hidden></div>
         <form id="in-form" autocomplete="off">
           <div class="in-grid">
             <div><label for="in-bulan">Bulan</label><input type="month" id="in-bulan" required></div>
             <div><label for="in-pin">PIN</label><input type="password" id="in-pin" required></div>
           </div>
-          <div id="in-rows"></div>
-          <div class="btn-row">
-            <button type="button" class="btn" id="in-add">+ Tambah baris</button>
-            <button type="submit" class="btn" id="in-send">Kirim</button>
-          </div>
+          <div class="table-scroll"><table class="cek"><thead><tr><th>PSO</th><th>Pegawai</th><th>TAD</th><th>Man-month</th></tr></thead><tbody id="in-rows"></tbody><tfoot><tr><td>Total</td><td id="t-peg">0</td><td id="t-tad">0</td><td id="t-mm">0</td></tr></tfoot></table></div>
+          <div class="btn-row" style="margin-top:12px"><button type="submit" class="btn" id="in-send">Kirim</button></div>
         </form>
         <div id="in-msg" class="in-msg" hidden></div>
       </section>
@@ -47,7 +47,7 @@
 <script>
 (function () {
   var v = Date.now();
-  ['sidebar', 'config', 'sheets', 'data'].forEach(function (n) { document.write('<script src="js/' + n + '.js?t=' + v + '"><\/script>'); });
+  ['sidebar', 'config'].forEach(function (n) { document.write('<script src="js/' + n + '.js?t=' + v + '"><\/script>'); });
   document.write('<script src="js/input-mm.js?t=' + v + '"><\/script>');
 })();
 </script>
