@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Input Data &middot; UPMK IV</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=__BUILD__">
+<style>
+[hidden]{display:none!important}
+.container > .card { padding:24px; }
+.in-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin:12px 0 16px; }
+.in-grid .wide { grid-column:1 / -1; }
+.in-grid label { display:block; font-size:12px; font-weight:600; margin-bottom:4px; }
+.in-grid label i { color:#b91c1c; font-style:normal; }
+.in-grid input, .in-grid select, .in-grid textarea { width:100%; padding:8px; border:1px solid #d0d5dd; border-radius:6px; font:inherit; background:#fff; box-sizing:border-box; }
+.in-grid small { color:#667085; font-size:11px; }
+.in-msg { margin-top:12px; padding:10px 12px; border-radius:6px; font-size:14px; }
+.in-msg.ok { background:#e7f6ec; color:#14532d; } .in-msg.err { background:#fde8e8; color:#7f1d1d; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div id="sidebar"></div>
+  <main class="main">
+    <div class="container">
+      <section class="card">
+        <h1>Input Data</h1>
+        <p class="muted">Pilih jenis data, isi formulir, klik Kirim. Data masuk ke tab dengan nama yang sama di spreadsheet induk. Kolom bertanda <b style="color:#b91c1c">*</b> adalah kunci: mengirim ulang dengan kunci yang sama <b>menimpa</b> data lama (cara mengoreksi), bukan menggandakan.</p>
+        <div id="in-warn" class="banner" hidden></div>
+        <form id="in-form" autocomplete="off">
+          <div class="in-grid">
+            <div><label for="in-jenis">Jenis data</label><select id="in-jenis"></select></div>
+            <div><label for="in-pin">PIN</label><input type="password" id="in-pin" required></div>
+          </div>
+          <p class="muted" id="in-ket"></p>
+          <div class="in-grid" id="in-fields"></div>
+          <div class="btn-row"><button type="submit" class="btn" id="in-send">Kirim</button></div>
+        </form>
+        <div id="in-msg" class="in-msg" hidden></div>
+      </section>
+    </div>
+  </main>
+</div>
+<script>
+(function () {
+  var v = Date.now();
+  ['sidebar', 'config', 'sheets', 'data', 'input'].forEach(function (n) { document.write('<script src="js/' + n + '.js?t=' + v + '"><\/script>'); });
+})();
+</script>
+</body>
+</html>

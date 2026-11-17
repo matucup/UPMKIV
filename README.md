@@ -31,9 +31,6 @@ Bila ada PSO baru atau penulisan baru, tambahkan satu baris di `PSO_ALIAS` (atau
 
 Datalist dan Adkon hanya membaca baris `UPMK_SAYA` (`UPMK IV`) karena sheet aslinya memuat banyak UPMK.
 
-## Input Man-Month (uji coba)
+## Input lewat web
 
-Halaman `input-mm.html` mengirim realisasi MM per personil ke tab `MM_Aktual` di spreadsheet induk lewat Google Apps Script (`apps-script/Code.gs`).
-Pasang satu kali: Extensions > Apps Script di spreadsheet induk, tempel isi `Code.gs`, isi Script Property `PIN`, Deploy > Web app (Execute as: Me, Access: Anyone), lalu tempel alamatnya ke `INPUT_MM_URL` di `site/js/config.js`.
-
-Panduan untuk admin (tanpa kode): lihat `PANDUAN_ADMIN.md`. Halaman `cek-data.html` memeriksa apakah setiap tab terbaca.
+`input-mm.html` (aktual man-month) dan `input.html` (progres, isu, dokumen, paket, data laporan) mengirim data ke Google Apps Script (`apps-script/Code.gs`), yang menulis ke tab input di spreadsheet induk. Daftar formulir dan kolomnya ada di `FORMS` pada `site/js/input.js`; tab yang boleh ditulis ada di `TABS` pada `Code.gs`. Pemasangan dan pemakaian: `PANDUAN_ADMIN.md`. Halaman `cek-data.html` memeriksa apakah setiap tab terbaca.

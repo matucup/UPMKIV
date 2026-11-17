@@ -25,19 +25,20 @@ function addRow() {
 
 async function kirim(ev) {
   ev.preventDefault();
-  if (!INPUT_MM_URL) return msg('Alamat penerima (INPUT_MM_URL di config.js) belum diisi.', false);
+  if (!INPUT_URL) return msg('Alamat penerima (INPUT_URL di config.js) belum diisi.', false);
   const rows = [];
   for (const r of $('in-rows').children) {
     const nama = r.querySelector('.r-nama').value, proyek = r.querySelector('.r-proyek').value, mm = r.querySelector('.r-mm').value;
     if (!nama && !proyek && mm === '') continue;
     if (!nama || !proyek || mm === '') return msg('Lengkapi nama, proyek, dan MM di setiap baris (atau hapus baris kosong).', false);
     const p = PERSONIL.find((x) => x.nama === nama && x.proyek === proyek);
-    rows.push({ nama, proyek, pso: p ? p.pso : '', mm: +mm });
+    if (+mm < 0 || +mm > 2) return msg('MM per baris harus antara 0 dan 2.', false);
+    rows.push({ Bulan: $('in-bulan').value, Nama: nama, PSO: p ? p.pso : '', Proyek: proyek, MM: +mm });
   }
   if (!rows.length) return msg('Belum ada baris yang diisi.', false);
   const btn = $('in-send'); btn.disabled = true; btn.textContent = 'Mengirim…';
   try {
-    const res = await fetch(INPUT_MM_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ pin: $('in-pin').value, bulan: $('in-bulan').value, rows }) });
+    const res = await fetch(INPUT_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ pin: $('in-pin').value, tab: 'MM_Aktual', rows }) });
     const j = await res.json();
     if (!j.ok) throw new Error(j.error || 'Ditolak');
     msg('Tersimpan: ' + j.baru + ' baris baru, ' + j.diperbarui + ' diperbarui.', true);
@@ -48,7 +49,7 @@ async function kirim(ev) {
 
 (async function () {
   const w = $('in-warn');
-  if (!INPUT_MM_URL) { w.hidden = false; w.textContent = 'Penerima data belum dipasang (INPUT_MM_URL kosong di config.js). Formulir bisa dicoba, tetapi belum bisa mengirim.'; }
+  if (!INPUT_URL) { w.hidden = false; w.textContent = 'Penerima data belum dipasang (INPUT_URL kosong di config.js). Formulir bisa dicoba, tetapi belum bisa mengirim.'; }
   $('in-bulan').value = new Date().toISOString().slice(0, 7);
   try { PERSONIL = await parseSheet(SOURCES.personil, normalizePersonil); }
   catch (e) { w.hidden = false; w.textContent = 'Daftar personil gagal dimuat: ' + e.message; }

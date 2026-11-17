@@ -26,12 +26,12 @@ async function cekSemua() {
     tr.children[2].innerHTML = st; tr.children[3].textContent = ket;
   }));
   const tr = document.createElement('tr');
-  let st = '<span class="warn">BELUM DIPASANG</span>', ket = 'INPUT_MM_URL di site/js/config.js masih kosong (lihat PANDUAN_ADMIN.md bagian C).';
-  if (INPUT_MM_URL) {
-    try { const j = await (await fetch(INPUT_MM_URL)).json(); st = j.ok ? '<span class="ok">OK</span>' : '<span class="bad">GAGAL</span>'; ket = j.info || j.error || ''; }
+  let st = '<span class="warn">BELUM DIPASANG</span>', ket = 'INPUT_URL di site/js/config.js masih kosong (lihat PANDUAN_ADMIN.md bagian C).';
+  if (INPUT_URL) {
+    try { const j = await (await fetch(INPUT_URL)).json(); st = j.ok ? '<span class="ok">OK</span>' : '<span class="bad">GAGAL</span>'; ket = j.info || j.error || ''; }
     catch (e) { st = '<span class="bad">GAGAL</span>'; ket = 'Penerima tidak menjawab. Periksa deployment Apps Script (akses harus "Anyone").'; }
   }
-  tr.innerHTML = `<td><b>Penerima Input MM</b></td><td>Menyimpan kiriman halaman Input MM</td><td>${st}</td><td>${escH(ket)}</td>`;
+  tr.innerHTML = `<td><b>Penerima input web</b></td><td>Menyimpan kiriman halaman Input MM dan Input Data Lain</td><td>${st}</td><td>${escH(ket)}</td>`;
   body.appendChild(tr);
 }
 document.getElementById('cek-sheet').href = `https://docs.google.com/spreadsheets/d/${DATA_ID}/edit`;
